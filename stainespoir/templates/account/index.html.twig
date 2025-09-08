@@ -1,0 +1,390 @@
+{% extends 'base.html.twig' %}
+{% block title %}Mon compte — Espace parent{% endblock %}
+
+{# === CSS : on garde le global + on ajoute le thème "account" de ta maquette === #}
+{% block stylesheets %}
+    {{ parent() }}
+    {# Si tu as packagé account.css via AssetMapper : #}
+    <link rel="stylesheet" href="{{ asset('assets/styles/account.css') }}">
+{% endblock %}
+
+{% block body %}
+    <main id="contenu" class="account">
+        {# ===== HERO (identique à ta maquette) ===== #}
+        <section class="account-hero">
+            <div class="container">
+                <div class="hero-row">
+                    <div class="hero-left">
+                        <span class="pill">👨‍👩‍👧 Espace parents</span>
+                        <h1>Mon compte</h1>
+                        <p class="lead">Suivez les <strong>présences</strong>, les <strong>sorties</strong> et vos <strong>messages</strong> avec l’équipe.</p>
+                        <div class="chips">
+                            <span class="chip">Samedi 10h–12h</span>
+                            <span class="chip">Maison des associations</span>
+                            <span class="chip">Stains</span>
+                        </div>
+                    </div>
+
+                    <aside class="hero-right">
+                        <label class="fgroup floating selectKid">
+                            <select id="kidSelect" aria-label="Choisir un enfant">
+                                {% for k in kids %}
+                                    <option value="{{ k.id }}" {{ k.id == current.id ? 'selected' }}>{{ k.firstName }} {{ k.lastName }} — {{ k.level ?? '' }}</option>
+                                {% endfor %}
+                            </select>
+                            <span>Enfant</span>
+                        </label>
+
+                        <div class="kpi-circles">
+                            <div class="circle" data-val="0" title="Présences ce mois"></div>
+                            <div class="circle" data-val="0" title="Absences ce mois"></div>
+                            <div class="circle" data-val="0" data-max="5" title="Sorties à venir"></div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </section>
+
+        {# ===== NAV TABS (hash, comme ta page) ===== #}
+        <section class="section tabs">
+            <div class="container">
+                <nav class="tabs-nav" aria-label="Sections du tableau de bord">
+                    <a href="#overview" class="active">Vue d’ensemble</a>
+                    <a href="#presences">Présences</a>
+                    <a href="#sorties">Sorties</a>
+                    <a href="#messages">Messages</a>
+                    <a href="#settings">Paramètres</a>
+                </nav>
+            </div>
+        </section>
+
+        {# ===== PANELS ===== #}
+        <section class="section">
+            <div class="container">
+
+                {# OVERVIEW #}
+                <div class="tab-panel" id="overview">
+                    <div class="grid-3">
+                        <article class="card ov-next">
+                            <div class="card-head"><b>Prochaine séance</b><span class="badge ok" id="nextSlot"></span></div>
+                            <p>Présence prévue : <span class="badge ghost" id="ovPresence">—</span></p>
+                            <p class="muted">Maison des associations — 6 av. Jules Guesde</p>
+                        </article>
+
+                        {# Remplacement de "Dernières notes" → "Messages récents" #}
+                        <article class="card ov-news">
+                            <div class="card-head"><b>Messages récents</b></div>
+                            <ul class="notes" id="ovMsgs"></ul>
+                        </article>
+
+                        <article class="card">
+                            <div class="card-head"><b>Sorties à venir</b></div>
+                            <ul class="clean" id="ovSorties"></ul>
+                            <div class="actions">
+                                <a class="btn ghost" href="#sorties">Voir toutes les sorties</a>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                {# PRESENCES (calendrier) #}
+                <div class="tab-panel" id="presences" hidden>
+                    <div class="panel-head">
+                        <h2>Présences — Calendrier</h2>
+                        <p class="muted">Lecture seule — les statuts sont saisis par l’équipe Stains Espoir.</p>
+                    </div>
+                    <div class="card cal">
+                        <div class="cal-head">
+                            <button class="btn ghost cal-prev" type="button" aria-label="Mois précédent">←</button>
+                            <div class="cal-title" id="calTitle"></div>
+                            <button class="btn ghost cal-next" type="button" aria-label="Mois suivant">→</button>
+                        </div>
+                        <div class="cal-grid" id="calGrid" aria-label="Calendrier mensuel"></div>
+                        <div class="legend">
+                            <span class="dot yes"></span> Présent
+                            <span class="dot no"></span> Absent
+                            <span class="dot maybe"></span> À confirmer
+                            <span class="dot none"></span> Non programmé
+                        </div>
+                    </div>
+                </div>
+
+                {# SORTIES #}
+                <div class="tab-panel" id="sorties" hidden>
+                    <div class="panel-head">
+                        <h2>Sorties</h2>
+                        <p class="muted">Autorisations parentales (lecture côté parent, envoi depuis le bouton).</p>
+                    </div>
+                    <div class="out-grid" id="sortiesGrid"></div>
+                </div>
+
+                {# MESSAGES #}
+                <div class="tab-panel" id="messages" hidden>
+                    <div class="panel-head">
+                        <h2>Messages</h2>
+                        <p class="muted">Échanges avec l’équipe Stains Espoir.</p>
+                    </div>
+                    <div class="msg-layout">
+                        <div class="card msg-list" id="msgList"></div>
+                        <form class="card msg-compose" id="msgForm">
+                            <label class="fgroup floating wide">
+                                <textarea id="msgText" rows="3" placeholder=" "></textarea>
+                                <span>Votre message…</span>
+                            </label>
+                            <div class="actions">
+                                <button class="btn" type="submit">Envoyer</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {# PARAMÈTRES #}
+                <div class="tab-panel" id="settings" hidden>
+                    <div class="panel-head">
+                        <h2>Paramètres du compte</h2>
+                        <p class="muted">Profil & enfants rattachés (lecture seule).</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <form class="card" id="profileForm">
+                            <b>Profil parent</b>
+                            <div class="grid-2">
+                                <label class="fgroup floating">
+                                    <input type="text" id="pf_prenom" placeholder=" " value="{{ app.user.profile.firstName ?? '' }}" disabled>
+                                    <span>Prénom</span>
+                                </label>
+                                <label class="fgroup floating">
+                                    <input type="text" id="pf_nom" placeholder=" " value="{{ app.user.profile.lastName ?? '' }}" disabled>
+                                    <span>Nom</span>
+                                </label>
+                                <label class="fgroup floating">
+                                    <input type="email" id="pf_email" placeholder=" " value="{{ app.user.email }}" disabled>
+                                    <span>Email</span>
+                                </label>
+                                <label class="fgroup floating">
+                                    <input type="tel" id="pf_tel" placeholder=" " value="{{ app.user.profile.phone ?? '' }}" disabled>
+                                    <span>Téléphone</span>
+                                </label>
+                            </div>
+                            <div class="actions">
+                                <a class="btn ghost" href="{{ path('app_logout') }}">Déconnexion</a>
+                            </div>
+                        </form>
+
+                        <div class="card">
+                            <b>Enfants rattachés</b>
+                            <div class="kid-mini-list">
+                                {% for k in kids %}
+                                    <div class="kid-mini"><b>{{ k.firstName }} {{ k.lastName }}</b> — {{ k.level ?? '' }}</div>
+                                {% endfor %}
+                            </div>
+                            <p class="muted" style="margin-top:8px;">Pour modifier la liste, merci de contacter l’équipe.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    {# ===== MODALE : Autorisation de sortie (même markup) ===== #}
+    <div class="modal modal-full" id="authModal" hidden aria-hidden="true" role="dialog" aria-labelledby="authTitle">
+        <div class="modal-dialog">
+            <button class="modal-close" data-close aria-label="Fermer">×</button>
+            <h3 id="authTitle">Autorisation de sortie</h3>
+            <p class="muted" id="authSubtitle"></p>
+            <form id="authForm" class="fstack" novalidate>
+                <label class="fgroup floating">
+                    <input type="text" id="au_parent" placeholder=" " required value="{{ (app.user.profile.firstName ~ ' ' ~ app.user.profile.lastName)|trim }}">
+                    <span>Nom et prénom du parent</span>
+                </label>
+                <label class="fgroup floating">
+                    <input type="tel" id="au_tel" placeholder=" " required value="{{ app.user.profile.phone ?? '' }}">
+                    <span>Téléphone</span>
+                </label>
+                <label class="fgroup floating wide">
+                    <textarea id="au_sante" rows="3" placeholder=" "></textarea>
+                    <span>Informations médicales / allergies (optionnel)</span>
+                </label>
+                <label class="check">
+                    <input type="checkbox" id="au_ok" required>
+                    <span>J’autorise la participation de mon enfant et je certifie être le représentant légal.</span>
+                </label>
+                <div class="actions">
+                    <button class="btn" type="submit">Envoyer l’autorisation</button>
+                    <button class="btn outline" type="button" data-close>Annuler</button>
+                    <button class="btn ghost" type="button" id="au_print">Imprimer</button>
+                </div>
+                <p class="form-msg" id="authMsg"></p>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            // --- Données Twig (déjà présentes dans ta page) ---
+            const PRESENCE_RATE_30 = {{ (data.presenceRate30 ?? 0)|number_format(1, '.', '') }}; // 0..100
+            const OUT_UP = [
+                {% for r in (data.upcomingOutings ?? data.registrations ?? []) %}
+                { id: {{ r.outing.id }}, titre: {{ r.outing.title|json_encode|raw }}, date: {{ r.outing.startsAt|date('c')|json_encode|raw }}, lieu: {{ (r.outing.location ?? '')|json_encode|raw }}, status: {{ r.status|json_encode|raw }} }{{ not loop.last ? ',' : '' }}
+                {% endfor %}
+            ];
+            const MSGS = [
+                {% for m in (data.messages ?? []) %}
+                { id: {{ m.id }}, from: {{ (m.sender == 'staff' ? 'equipe' : 'parent')|json_encode|raw }}, t: {{ m.createdAt|date('U') }}*1000, txt: {{ m.body|json_encode|raw }} }{{ not loop.last ? ',' : '' }}
+                {% endfor %}
+            ];
+
+            // --- Sélecteur d'enfant : recharge la page (et garde l'onglet via hash) ---
+            const kidSelect = document.getElementById('kidSelect');
+            kidSelect?.addEventListener('change', ()=>{
+                const id = kidSelect.value;
+                const hash = location.hash || '#overview';
+                const base = "{{ path('app_account', {'tab': tab}) }}";
+                location.href = base + "?enfant=" + encodeURIComponent(id) + hash;
+            });
+
+            // --- Onglets (hash) ---
+            const links  = Array.from(document.querySelectorAll('.tabs-nav a'));
+            const panels = Array.from(document.querySelectorAll('.tab-panel'));
+            function openTab(hash){
+                if (!hash) hash = '#overview';
+                links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === hash));
+                panels.forEach(p => p.hidden = ('#'+p.id) !== hash);
+                // appels de rendu par onglet (évite erreurs si éléments absents)
+                if (hash === '#overview') { renderOverview(); paintCircles(); }
+                if (hash === '#presences') { drawCalendarSafely(); paintCircles(); }
+                if (hash === '#sorties') { renderSorties(); paintCircles(); }
+                if (hash === '#messages') { renderMessages(); }
+            }
+            // Laisse le comportement natif (le hash change) et on réagit sur hashchange
+            links.forEach(a => a.addEventListener('click', () => setTimeout(()=>openTab(location.hash), 0)));
+            window.addEventListener('hashchange', () => openTab(location.hash));
+            openTab(location.hash);
+
+            // --- KPI circles : calcul en % dépendant de l'enfant courant ---
+            function paintCircles(){
+                const signed = OUT_UP.filter(o => o.status === 'confirmed' || o.status === 'attended').length;
+                const total  = OUT_UP.length;
+                const outingsRate = total ? Math.round((signed / total) * 100) : 0;
+
+                const presence = Math.max(0, Math.min(100, Math.round(PRESENCE_RATE_30)));
+                const absences = Math.max(0, Math.min(100, 100 - presence));
+
+                const circles = document.querySelectorAll('.kpi-circles .circle');
+                if (circles[0]) {
+                    circles[0].style.setProperty('--p', presence);
+                    circles[0].innerHTML = `<b>${presence}%</b><span>Présences (30j)</span>`;
+                }
+                if (circles[1]) {
+                    circles[1].style.setProperty('--p', absences);
+                    circles[1].innerHTML = `<b>${absences}%</b><span>Absences (30j)</span>`;
+                }
+                if (circles[2]) {
+                    circles[2].style.setProperty('--p', outingsRate);
+                    circles[2].innerHTML = `<b>${outingsRate}%</b><span>Sorties signées</span>`;
+                }
+            }
+
+            // --- OVERVIEW ---
+            function renderOverview(){
+                // Prochaine séance (samedi suivant) + statut prévu selon données
+                const nxt = nextSaturday(new Date());
+                document.getElementById('nextSlot')?.replaceChildren(
+                    document.createTextNode(nxt.toLocaleDateString('fr-FR', {weekday:'long', day:'2-digit', month:'long'}))
+                );
+                // Badge "Présence prévue" : on utilise la moyenne 30j pour donner une indication
+                const ovPresence = document.getElementById('ovPresence');
+                if (ovPresence) ovPresence.textContent = PRESENCE_RATE_30 >= 50 ? 'Plutôt présent' : 'Plutôt absent';
+
+                // Messages récents
+                const list = (MSGS||[]).slice().sort((a,b)=>b.t-a.t).slice(0,5);
+                const ov = document.getElementById('ovMsgs');
+                if (ov) ov.innerHTML = list.length
+                    ? list.map(n => `<li>${new Date(n.t).toLocaleDateString('fr-FR')} — ${n.txt}</li>`).join('')
+                    : '<li class="muted">Aucun message récent.</li>';
+
+                // 3 prochaines sorties
+                const soon = (OUT_UP||[]).slice().sort((a,b)=> new Date(a.date)-new Date(b.date)).slice(0,3);
+                const ovS = document.getElementById('ovSorties');
+                if (ovS) ovS.innerHTML = soon.length
+                    ? soon.map(s => `<li>${new Date(s.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} — ${s.titre}</li>`).join('')
+                    : '<li class="muted">Aucune sortie programmée.</li>';
+            }
+            function nextSaturday(from){
+                const d = new Date(from); const add = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate()+add); d.setHours(0,0,0,0); return d;
+            }
+
+            // --- CALENDRIER (version "safe" : ne plante pas si les éléments ne sont pas présents) ---
+            function drawCalendarSafely(){
+                const calGrid  = document.getElementById('calGrid');
+                const calTitle = document.getElementById('calTitle');
+                const prevBtn  = document.querySelector('.cal-prev');
+                const nextBtn  = document.querySelector('.cal-next');
+                if (!calGrid || !calTitle || !prevBtn || !nextBtn) return;
+
+                const today = new Date();
+                let viewYear = today.getFullYear(), viewMonth = today.getMonth();
+
+                prevBtn.onclick = () => { viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} draw(); };
+                nextBtn.onclick = () => { viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} draw(); };
+
+                function monthLabel(y,m){ return new Date(y,m,1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' }); }
+                function firstWeekdayIndex(y,m){ const d = new Date(y,m,1); return (d.getDay()+6)%7; } // lundi=0
+                function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+                function draw(){
+                    calTitle.textContent = monthLabel(viewYear, viewMonth);
+                    const startPad = firstWeekdayIndex(viewYear, viewMonth);
+                    const dim = daysInMonth(viewYear, viewMonth);
+                    const dayNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+                    let html = dayNames.map(n=>`<div class="cal-dayname">${n}</div>`).join('');
+                    for(let i=0;i<startPad;i++) html += `<div class="cal-cell empty"></div>`;
+                    for(let d=1; d<=dim; d++){
+                        const date = new Date(viewYear,viewMonth,d);
+                        const isSat = date.getDay()===6;
+                        html += `<div class="cal-cell ${isSat?'sat':''}">
+              <div class="cal-num">${d}</div>
+              ${isSat?`<div class="cal-status none">—</div>`:''}
+            </div>`;
+                    }
+                    calGrid.innerHTML = html;
+                }
+                draw();
+            }
+
+            // --- SORTIES (liste + modale autorisation) ---
+            function renderSorties(){
+                const wrap = document.getElementById('sortiesGrid');
+                if (!wrap) return;
+                const items = (OUT_UP||[]).slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
+                wrap.innerHTML = items.length ? items.map(s=>`
+          <article class="out-ticket">
+            <div class="ribbon">Sortie</div>
+            <div class="t-head">
+              <h3>${s.titre}</h3>
+              <div class="t-date">${new Date(s.date).toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long' })} · 10h–12h</div>
+            </div>
+            <div class="t-meta">${s.lieu || ''}</div>
+          </article>
+        `).join('') : '<p class="muted">Aucune sortie planifiée.</p>';
+            }
+
+            // --- MESSAGES (read-only côté parent ici) ---
+            function renderMessages(){
+                const box = document.getElementById('msgList');
+                if (!box) return;
+                const arr = (MSGS||[]).slice().sort((a,b)=>a.t-b.t);
+                box.innerHTML = arr.map(m=>`
+          <div class="msg ${m.from==='equipe'?'left':'right'}">
+            <div class="bubble">${m.txt}</div>
+            <div class="when">${new Date(m.t).toLocaleString('fr-FR')}</div>
+          </div>`).join('');
+                box.scrollTop = box.scrollHeight;
+            }
+        });
+    </script>
+{% endblock %}
+
