@@ -139,6 +139,7 @@
       <path value="$PROJECT_DIR$/stainespoir/vendor/doctrine/dbal" />
       <path value="$PROJECT_DIR$/stainespoir/vendor/doctrine/persistence" />
       <path value="$PROJECT_DIR$/stainespoir/vendor/egulias/email-validator" />
+      <path value="$PROJECT_DIR$/stainespoir/vendor/twig/string-extra" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2" />

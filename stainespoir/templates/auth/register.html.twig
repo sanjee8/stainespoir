@@ -1,0 +1,500 @@
+{# templates/auth/register.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription parent — Stains Espoir{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <style>
+        :root{
+            --brand:#6A1B9A; --ink:#111; --muted:#667085; --bg:#fff;
+            --radius:16px; --shadow:0 10px 30px rgba(20,20,43,.08); --ring:0 0 0 3px rgba(106,27,154,.15);
+            --pill:#f5ecff; --line:#eef0f3;
+        }
+        .auth-hero{padding:56px 0;background:linear-gradient(180deg,#fff,#fafaff)}
+        .auth-hero .pill{display:inline-block;background:var(--pill);color:var(--brand);padding:.5rem .75rem;border-radius:999px;font-weight:600}
+        .auth-hero h1{margin:.5rem 0 0;font-size:clamp(26px,4vw,34px)}
+        .auth-hero .lead{margin:.35rem 0 0;color:var(--muted)}
+
+        .section{padding:28px 0}
+        .card{background:#fff;border:1px solid #eee;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+
+        /* Wizard */
+        .wizard{display:flex; gap:10px; list-style:none; padding:0; margin:0 0 16px}
+        .wizard li{flex:1; display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; color:#6b7280}
+        .wizard li span{display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#f1f1fb; color:#333; font-weight:700}
+        .wizard li em{font-style:normal; font-weight:600}
+        .wizard li.active{border-color:#e6daf8; color:#3a3a3a}
+        .wizard li.active span{background:var(--pill); color:var(--brand)}
+        .wizard li.current{box-shadow:var(--ring); border-color:var(--brand); color:#111}
+        .wizard li.current span{background:var(--brand); color:#fff}
+
+        /* Grids + boutons */
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+        .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+        .actions{display:flex;gap:10px;justify-content:space-between;margin-top:14px}
+        .right{margin-left:auto}
+        .btn{display:inline-block;border:1px solid #d9dce0;padding:12px 18px;border-radius:12px;background:#fff;cursor:pointer;text-decoration:none}
+        .btn:hover{box-shadow:var(--shadow)}
+        .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+        .btn.ghost{background:#fff}
+        .btn.danger{background:#fff;border-color:#dc2626;color:#dc2626}
+
+        /* Champs flottants */
+        .fgroup{position:relative; display:block}
+        .fgroup input,.fgroup select,.fgroup textarea{
+            width:100%; padding:14px 12px; border:1px solid #e3e6ea; border-radius:12px; font:inherit; background:#fff; min-width:0;
+        }
+        .fgroup input:focus,.fgroup select:focus,.fgroup textarea:focus{outline:none; box-shadow:var(--ring); border-color:#c9b0ee}
+        .fgroup.floating > span{
+            position:absolute; left:12px; top:12px; color:#8a8fa0; pointer-events:none; transition:all .16s ease;
+            background:#fff; padding:0 6px; transform-origin:left top;
+        }
+        .fgroup.floating input:not(:placeholder-shown) + span,
+        .fgroup.floating input:focus + span,
+        .fgroup.floating select:focus + span,
+        .fgroup.floating textarea:not(:placeholder-shown) + span,
+        .fgroup.floating textarea:focus + span{
+            transform:translateY(-20px) scale(.85); color:#6A1B9A;
+        }
+        .fgroup.floating input::placeholder, .fgroup.floating textarea::placeholder{color:transparent}
+        .hint{display:block; color:#8b90a3; font-size:.9rem; margin-top:6px}
+
+        /* Password meter + show/hide */
+        .password{position:relative}
+        .showpass{position:absolute; right:10px; top:10px; border:0; background:transparent; cursor:pointer}
+        .meter{position:relative; height:6px; background:#eef0f6; border-radius:999px; margin-top:8px; overflow:hidden}
+        .meter i{position:absolute; inset:0; transform-origin:left; transform:scaleX(var(--p,0)); background:linear-gradient(90deg,#ff6a6a,#ffe16a,#60c173);}
+
+        /* Kids */
+        .kids{display:grid; gap:14px}
+        .kid.card{padding:16px}
+        .kid-actions{display:flex; justify-content:flex-end; margin-top:8px}
+        #btnAddKid{ margin-bottom:14px; } /* espace sous le bouton */
+
+        /* Récap */
+        .recap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+        .recap-card{border:1px solid #eee;border-radius:12px;padding:12px;background:#fff}
+        .recap-card h4{margin:0 0 6px;font-size:1rem}
+        .kid-mini{border-top:1px dashed #eee; padding-top:6px; margin-top:6px}
+        .form-msg{min-height:22px;margin-top:8px;color:#b91c1c}
+
+        /* Utils */
+        .hidden{display:none}
+        .muted{color:var(--muted)}
+
+        /* Mobile optimisations */
+        @media (max-width: 900px){
+            .wizard{flex-direction:column}
+            .grid-2,.grid-3{grid-template-columns:1fr;gap:16px}
+            .card{padding:18px}
+        }
+        @media (max-width: 600px){
+            .auth-hero{padding:42px 0}
+            .grid-2,.grid-3{gap:18px}
+            .card{padding:16px}
+            .fgroup input,.fgroup select,.fgroup textarea{padding:16px 14px; font-size:16px;} /* anti-zoom iOS & plus d’air */
+            .actions{flex-wrap:wrap; gap:12px}
+            #btnAddKid{width:100%}
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <section class="auth-hero">
+        <div class="container">
+            <span class="pill">👨‍👩‍👧 Espace parents</span>
+            <h1>Créer mon compte parent</h1>
+            <p class="lead">Un seul compte pour suivre l’évolution de vos enfant(s) tout au long de l’année.</p>
+        </div>
+    </section>
+
+    <section class="section" id="formSection">
+        <div class="container">
+            <ol class="wizard" aria-label="Progression">
+                <li class="active current" data-step="0"><span>1</span><em>Compte</em></li>
+                <li data-step="1"><span>2</span><em>Parent</em></li>
+                <li data-step="2"><span>3</span><em>Enfant(s)</em></li>
+                <li data-step="3"><span>4</span><em>Récap</em></li>
+            </ol>
+
+            <form id="registerForm" novalidate>
+                <input type="hidden" id="csrfField" value="{{ csrf_token }}">
+
+                {# STEP 1 — Compte #}
+                <section class="card step-pane step-pane-1">
+                    <h2>Informations de connexion</h2>
+                    <div class="grid-2">
+                        <label class="fgroup floating">
+                            <input type="email" id="su_email" required autocomplete="email" placeholder=" ">
+                            <span>Email</span>
+                        </label>
+
+                        <label class="fgroup floating password">
+                            <input type="password" id="su_password" required minlength="8" autocomplete="new-password" placeholder=" ">
+                            <span>Mot de passe</span>
+                            <button class="showpass" type="button" aria-label="Afficher/masquer le mot de passe">👁️</button>
+                            <div class="meter" aria-hidden="true"><i></i></div>
+                            <small class="hint">8+ caractères, 1 majuscule, 1 chiffre, 1 symbole</small>
+                        </label>
+
+                        <label class="fgroup floating password">
+                            <input type="password" id="su_confirm" required autocomplete="new-password" placeholder=" ">
+                            <span>Confirmer le mot de passe</span>
+                            <button class="showpass" type="button" aria-label="Afficher/masquer le mot de passe">👁️</button>
+                        </label>
+
+                        <label class="fgroup floating">
+                            <input type="tel" id="su_parent_tel" placeholder=" ">
+                            <span>Téléphone (contact)</span>
+                        </label>
+                    </div>
+
+                    <div class="actions">
+                        <span class="muted">Déjà un compte ? <a href="{{ path('app_home') }}">Se connecter</a></span>
+                        <button class="btn primary right" type="button" id="btnNext">Continuer →</button>
+                    </div>
+                </section>
+
+                {# STEP 2 — Parent #}
+                <section class="card step-pane step-pane-2 hidden">
+                    <h2>Informations du parent / tuteur</h2>
+                    <div class="grid-2">
+                        <label class="fgroup floating">
+                            <input type="text" id="su_parent_prenom" required placeholder=" ">
+                            <span>Prénom</span>
+                        </label>
+                        <label class="fgroup floating">
+                            <input type="text" id="su_parent_nom" required placeholder=" ">
+                            <span>Nom</span>
+                        </label>
+                        <label class="fgroup floating">
+                            <select id="su_lien" required>
+                                <option value="" selected disabled>Choisir…</option>
+                                <option>Père</option><option>Mère</option><option>Tuteur / Tutrice</option><option>Autre</option>
+                            </select>
+                            <span>Lien avec l’enfant</span>
+                        </label>
+                        <label class="fgroup floating">
+                            <input type="text" id="su_adresse" placeholder=" ">
+                            <span>Adresse</span>
+                        </label>
+                        <label class="fgroup floating">
+                            <input type="text" id="su_cp" placeholder=" ">
+                            <span>Code postal</span>
+                        </label>
+                        <label class="fgroup floating">
+                            <input type="text" id="su_ville" placeholder=" ">
+                            <span>Ville</span>
+                        </label>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn ghost" type="button" id="btnPrev">← Précédent</button>
+                        <button class="btn primary right" type="button" id="btnNext2">Continuer →</button>
+                    </div>
+                </section>
+
+                {# STEP 3 — Enfant(s) #}
+                <section class="card step-pane step-pane-3 hidden">
+                    <div class="actions" style="margin-top:0">
+                        <h2 style="margin:0">Enfant(s)</h2>
+                        <button class="btn" type="button" id="btnAddKid">+ Ajouter un enfant</button>
+                    </div>
+
+                    <div id="kidsList" class="kids"></div>
+                    <p class="muted">Ajoutez au moins un enfant (niveau scolaire requis).</p>
+
+                    <div class="actions">
+                        <button class="btn ghost" type="button" id="btnPrev2">← Précédent</button>
+                        <button class="btn primary right" type="button" id="btnNext3">Continuer →</button>
+                    </div>
+                </section>
+
+                {# STEP 4 — Récap + consentements #}
+                <section class="card step-pane step-pane-4 hidden">
+                    <h2>Récapitulatif</h2>
+                    <div id="recap" class="recap-grid" style="margin-bottom:14px;"></div>
+
+                    <h2>Consentements</h2>
+                    <div class="fgroup">
+                        <label class="check"><input type="checkbox" id="consent_rgpd" required> J’accepte le traitement de mes données (RGPD) dans le cadre de l’accompagnement.</label>
+                    </div>
+                    <div class="fgroup" style="margin-top:6px">
+                        <label class="check"><input type="checkbox" id="consent_photo"> J’autorise l’utilisation d’images des activités (optionnel).</label>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn ghost" type="button" id="btnPrev3">← Précédent</button>
+                        <button class="btn primary right" type="submit" id="btnSubmit">Créer mon compte</button>
+                    </div>
+                </section>
+
+                <p class="form-msg" id="formMsg" role="status" aria-live="polite"></p>
+            </form>
+        </div>
+    </section>
+
+    {# Success card #}
+    <section class="section success" id="successBlock" hidden>
+        <div class="container">
+            <div class="card" style="max-width:680px; margin:0 auto; text-align:center">
+                <div style="font-size:48px" aria-hidden="true">🎉</div>
+                <h2>Compte créé !</h2>
+                <p>Bienvenue dans l’espace parents. Vous pourrez suivre l’assiduité, les objectifs et les sorties de votre(vos) enfant(s).</p>
+                <div class="actions" style="justify-content:center">
+                    <a href="{{ path('app_home') }}" class="btn">Se connecter</a>
+                    <a href="{{ path('app_home') }}" class="btn ghost">Retour à l’accueil</a>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const panes = [
+                document.querySelector('.step-pane-1'),
+                document.querySelector('.step-pane-2'),
+                document.querySelector('.step-pane-3'),
+                document.querySelector('.step-pane-4'),
+            ];
+            const bullets = Array.from(document.querySelectorAll('.wizard li'));
+            const msg = document.getElementById('formMsg');
+            const kidsList = document.getElementById('kidsList');
+            const form = document.getElementById('registerForm');
+            const csrfToken = document.getElementById('csrfField')?.value || document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+            // Boutons
+            const btnNext  = document.getElementById('btnNext');
+            const btnNext2 = document.getElementById('btnNext2');
+            const btnNext3 = document.getElementById('btnNext3');
+            const btnPrev  = document.getElementById('btnPrev');
+            const btnPrev2 = document.getElementById('btnPrev2');
+            const btnPrev3 = document.getElementById('btnPrev3');
+            const btnAddKid= document.getElementById('btnAddKid');
+
+            let step = 0;
+
+            function showStep(i){
+                step = Math.max(0, Math.min(3, i));
+                panes.forEach((p, idx) => p.classList.toggle('hidden', idx !== step));
+                bullets.forEach((li, idx) => {
+                    li.classList.toggle('active', idx <= step);
+                    li.classList.toggle('current', idx === step);
+                });
+                if (msg) msg.textContent = '';
+                if (step === 3) buildRecap();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function fieldVal(id){ const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
+            function scorePwd(v){ let s=0; if(!v) return 0; if(v.length>=8) s++; if(/[A-Z]/.test(v)) s++; if(/[0-9]/.test(v)) s++; if(/[^A-Za-z0-9]/.test(v)) s++; return s; }
+
+            // Jauge + show/hide password (pour les deux champs)
+            const pass = document.getElementById('su_password');
+            const meter = pass ? pass.closest('.password')?.querySelector('.meter i') : null;
+            pass?.addEventListener('input', e => { const sc = scorePwd(e.target.value); if (meter) meter.style.setProperty('--p', sc/4); });
+            document.querySelectorAll('.showpass').forEach(btn => btn.addEventListener('click', () => {
+                const inp = btn.parentElement.querySelector('input'); if (!inp) return; inp.type = (inp.type === 'password') ? 'text' : 'password';
+            }));
+
+            function validate(currentOnly = true){
+                const errors = {};
+                const err = (k,v)=>errors[k]=v;
+
+                const check1 = () => {
+                    const email = fieldVal('su_email');
+                    const p = fieldVal('su_password');
+                    const c = fieldVal('su_confirm');
+                    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) err('account.email','Email invalide.');
+                    if (scorePwd(p) < 3) err('account.password','Mot de passe trop faible (8+, 1 maj, 1 chiffre, 1 symbole).');
+                    if (p !== c) err('account.confirm','Les mots de passe ne correspondent pas.');
+                };
+                const check2 = () => {
+                    if (!fieldVal('su_parent_prenom')) err('parent.firstName','Prénom requis.');
+                    if (!fieldVal('su_parent_nom')) err('parent.lastName','Nom requis.');
+                    if (!document.getElementById('su_lien')?.value) err('parent.relation','Lien avec l’enfant requis.');
+                };
+                const check3 = () => {
+                    const blocks = kidsList ? kidsList.querySelectorAll('.kid') : [];
+                    if (!blocks || blocks.length < 1) { err('kids','Ajoutez au moins un enfant.'); return; }
+                    blocks.forEach((kid, i) => {
+                        const v = s => kid.querySelector(`[name$="${s}"]`)?.value?.trim() || '';
+                        if (!v('_prenom')) err(`kids.${i}.firstName`, 'Prénom requis.');
+                        if (!v('_nom')) err(`kids.${i}.lastName`, 'Nom requis.');
+                        if (!v('_niveau')) err(`kids.${i}.level`, 'Niveau requis.');
+                    });
+                };
+                const check4 = () => {
+                    if (!document.getElementById('consent_rgpd')?.checked) err('consents.rgpd','Consentement RGPD requis.');
+                };
+
+                const checks = [check1, check2, check3, check4];
+                if (currentOnly) checks[step](); else checks.forEach(fn => fn());
+
+                if (Object.keys(errors).length) {
+                    const first = errors[Object.keys(errors)[0]] || 'Veuillez corriger les erreurs.';
+                    if (msg) msg.textContent = first;
+                    return false;
+                }
+                if (msg) msg.textContent = '';
+                return true;
+            }
+
+            // Kids
+            function addKid(prefill = {}){
+                if(!kidsList) return;
+                const id = 'kid_' + Math.random().toString(36).slice(2,8);
+                const el = document.createElement('div');
+                el.className = 'kid card';
+                el.innerHTML = `
+          <div class="grid-3">
+            <label class="fgroup floating"><input required type="text" name="${id}_prenom" value="${prefill.firstName||''}" placeholder=" "><span>Prénom</span></label>
+            <label class="fgroup floating"><input required type="text" name="${id}_nom" value="${prefill.lastName||''}" placeholder=" "><span>Nom</span></label>
+            <label class="fgroup floating"><input type="date" name="${id}_dob" value="${prefill.dob||''}" placeholder=" "><span>Date de naissance</span></label>
+            <label class="fgroup floating">
+              <select required name="${id}_niveau">
+                <option value="" disabled ${!prefill.level?'selected':''}>Choisir…</option>
+                <option>CE2</option><option>CM1</option><option>CM2</option>
+                <option>6e</option><option>5e</option><option>4e</option><option>3e</option>
+                <option>2nde</option><option>1ère</option><option>Terminale</option>
+              </select>
+              <span>Niveau</span>
+            </label>
+            <label class="fgroup floating"><input name="${id}_etab" value="${prefill.school||''}" placeholder=" "><span>Établissement (optionnel)</span></label>
+            <label class="fgroup floating"><textarea name="${id}_notes" rows="2" placeholder=" ">${prefill.notes||''}</textarea><span>Allergies / particularités (optionnel)</span></label>
+          </div>
+          <div class="kid-actions"><button type="button" class="btn danger remove">Supprimer</button></div>
+        `;
+                el.querySelector('.remove')?.addEventListener('click', () => el.remove());
+                kidsList.appendChild(el);
+            }
+            btnAddKid?.addEventListener('click', () => addKid());
+            if (kidsList && !kidsList.children.length) addKid();
+
+            // Récap
+            function buildRecap(){
+                const email = fieldVal('su_email');
+                const nom = fieldVal('su_parent_nom');
+                const prenom = fieldVal('su_parent_prenom');
+                const tel = fieldVal('su_parent_tel');
+                const lien = document.getElementById('su_lien')?.value || '';
+                const adr = fieldVal('su_adresse');
+                const cp  = fieldVal('su_cp');
+                const ville = fieldVal('su_ville');
+
+                const kids = [];
+                kidsList?.querySelectorAll('.kid').forEach(kid => {
+                    const v = s => kid.querySelector(`[name$="${s}"]`)?.value?.trim() || '';
+                    kids.push({ prenom:v('_prenom'), nom:v('_nom'), dob:v('_dob'), niveau:v('_niveau'), etab:v('_etab'), notes:v('_notes') });
+                });
+
+                const rec = document.getElementById('recap'); if(!rec) return;
+                rec.innerHTML = `
+          <div class="recap-card">
+            <h4>Compte</h4>
+            <div><b>Email</b><br>${email}</div>
+          </div>
+          <div class="recap-card">
+            <h4>Parent</h4>
+            <div><b>${prenom} ${nom}</b></div>
+            <div>${lien || ''}</div>
+            <div>${tel || ''}</div>
+            <div>${[adr, cp, ville].filter(Boolean).join(' ')}</div>
+          </div>
+          <div class="recap-card">
+            <h4>Enfant(s)</h4>
+            ${kids.map(k => `
+              <div class="kid-mini">
+                <b>${k.prenom} ${k.nom}</b> — ${k.niveau || '-'}${k.dob ? ` · ${k.dob}` : ''}
+                ${k.etab ? `<div class="muted">${k.etab}</div>` : ''}
+                ${k.notes ? `<div class="muted">${k.notes}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+            }
+
+            // Navigation
+            document.getElementById('btnNext')?.addEventListener('click', () => { if (!validate(true)) return; showStep(1); });
+            document.getElementById('btnNext2')?.addEventListener('click', () => { if (!validate(true)) return; showStep(2); });
+            document.getElementById('btnNext3')?.addEventListener('click', () => { if (!validate(true)) return; showStep(3); });
+            document.getElementById('btnPrev')?.addEventListener('click', () => showStep(0));
+            document.getElementById('btnPrev2')?.addEventListener('click', () => showStep(1));
+            document.getElementById('btnPrev3')?.addEventListener('click', () => showStep(2));
+
+            // Submit
+            form?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // valide toutes les étapes
+                const ok1 = (showStep(0), validate(true));
+                const ok2 = (showStep(1), validate(true));
+                const ok3 = (showStep(2), validate(true));
+                const ok4 = (showStep(3), validate(true));
+                if (!(ok1 && ok2 && ok3 && ok4)) { return; }
+
+                const kidsPayload = [];
+                document.querySelectorAll('#kidsList .kid').forEach(kid => {
+                    const v = (s) => kid.querySelector(`[name$="${s}"]`)?.value?.trim() || '';
+                    kidsPayload.push({
+                        firstName: v('_prenom'),
+                        lastName:  v('_nom'),
+                        dob:       v('_dob'),
+                        level:     v('_niveau'),
+                        school:    v('_etab') || null,
+                        notes:     v('_notes') || null,
+                    });
+                });
+
+                const payload = {
+                    _token: csrfToken,
+                    account: {
+                        email:    fieldVal('su_email'),
+                        password: fieldVal('su_password'),
+                        confirm:  fieldVal('su_confirm'),
+                    },
+                    parent: {
+                        firstName: fieldVal('su_parent_prenom'),
+                        lastName:  fieldVal('su_parent_nom'),
+                        phone:     fieldVal('su_parent_tel'),
+                        relation:  document.getElementById('su_lien')?.value || '',
+                        address:   fieldVal('su_adresse') || null,
+                        postalCode:fieldVal('su_cp') || null,
+                        city:      fieldVal('su_ville') || null,
+                    },
+                    kids: kidsPayload,
+                    consents: {
+                        rgpd:  !!document.getElementById('consent_rgpd')?.checked,
+                        photo: !!document.getElementById('consent_photo')?.checked,
+                    }
+                };
+
+                try{
+                    const res = await fetch('{{ path("app_register_submit") }}', {
+                        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+                    });
+                    if (res.ok){
+                        document.getElementById('successBlock')?.removeAttribute('hidden');
+                        document.getElementById('formSection')?.setAttribute('hidden','true');
+                        const lead = document.querySelector('.auth-hero .lead'); if (lead) lead.textContent = 'Votre compte a été créé avec succès.';
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        const data = await res.json().catch(()=>({}));
+                        const firstError = data?.errors ? (Object.values(data.errors)[0] || 'Erreur de validation.') : (data?.message || 'Une erreur est survenue.');
+                        if (msg) msg.textContent = firstError;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                } catch(e){
+                    if (msg) msg.textContent = 'Impossible de joindre le serveur.';
+                }
+            });
+
+            // Init
+            showStep(0);
+        });
+    </script>
+{% endblock %}

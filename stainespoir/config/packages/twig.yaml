@@ -1,5 +1,9 @@
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        main_nav:
+            - { label: "Accueil",       route: "app_home",          active_when: ["^app_home$"] }
+            - { label: "L’association", route: "app_asso",   active_when: ["^app_asso$"] }
 
 when@test:
     twig:

@@ -1,0 +1,101 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Se connecter — Stains Espoir{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .auth-hero{padding:56px 0;background:linear-gradient(180deg,#fff,#fafaff)}
+        .auth-hero .pill{display:inline-block;background:#f5ecff;color:#6A1B9A;padding:.5rem .75rem;border-radius:999px;font-weight:600}
+        .auth-hero h1{margin:.5rem 0 0;font-size:clamp(26px,4vw,34px)}
+        .auth-hero .lead{margin:.35rem 0 0;color:#667085}
+        .section{padding:28px 0}
+        .card{background:#fff;border:1px solid #eee;border-radius:16px;box-shadow:0 10px 30px rgba(20,20,43,.08);padding:20px}
+        .card.narrow{max-width:520px;margin:0 auto}
+        .fstack{display:grid;gap:16px}
+        .fgroup{position:relative;display:block}
+        .fgroup input{width:100%;padding:14px 12px;border:1px solid #e3e6ea;border-radius:12px;font:inherit}
+        .fgroup input:focus{outline:none;box-shadow:0 0 0 3px rgba(106,27,154,.15);border-color:#c9b0ee}
+        .fgroup.floating>span{position:absolute;left:12px;top:12px;color:#8a8fa0;pointer-events:none;transition:all .16s;background:#fff;padding:0 6px;transform-origin:left top}
+        .fgroup.floating input:not(:placeholder-shown)+span,
+        .fgroup.floating input:focus+span{transform:translateY(-20px) scale(.85);color:#6A1B9A}
+        .password{position:relative}
+        .showpass{position:absolute;right:10px;top:10px;border:0;background:transparent;cursor:pointer}
+        .actions{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap}
+        .btn{display:inline-block;border:1px solid #d9dce0;padding:12px 18px;border-radius:12px;background:#fff;cursor:pointer;text-decoration:none}
+        .btn:hover{box-shadow:0 10px 30px rgba(20,20,43,.08)}
+        .btn.ghost{background:#fff}
+        .muted{color:#667085}
+        .form-msg{min-height:22px;margin-top:8px}
+        .error{color:#b91c1c}
+        @media (max-width:600px){ .card{padding:16px} .fgroup input{padding:16px 14px;font-size:16px} }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <main id="contenu" class="auth">
+        <section class="auth-hero">
+            <div class="container">
+                <span class="pill">👨‍👩‍👧 Espace parents</span>
+                <h1>Se connecter</h1>
+                <p class="lead">Accédez au suivi de votre(vos) enfant(s).</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <form id="loginForm" class="card narrow" method="post" action="{{ path('app_login') }}">
+                    {% if error %}
+                        <p class="form-msg error">{{ error.messageKey|trans(error.messageData, 'security') }}</p>
+                    {% endif %}
+
+                    <div class="fstack">
+                        <label class="fgroup floating">
+                            {# IMPORTANT: name="email" — mappé dans security.yaml username_parameter #}
+                            <input type="email" id="lg_email" name="email" autocomplete="email" required placeholder=" " value="{{ last_username }}">
+                            <span>Email</span>
+                        </label>
+
+                        <label class="fgroup floating password">
+                            {# IMPORTANT: name="password" — mappé dans security.yaml password_parameter #}
+                            <input type="password" id="lg_password" name="password" autocomplete="current-password" required placeholder=" ">
+                            <span>Mot de passe</span>
+                            <button class="showpass" type="button" aria-label="Afficher/masquer le mot de passe">👁️</button>
+                        </label>
+
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                        <label class="check">
+                            <input type="checkbox" id="lg_remember" name="_remember_me" />
+                            <span>Se souvenir de moi</span>
+                        </label>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn" type="submit">Connexion</button>
+                        <a class="btn ghost" href="{{ path('app_register') }}">Créer un compte</a>
+                    </div>
+
+                    <p class="muted" style="margin-top:8px;">
+                        <a class="text-link" href="#" onclick="alert('À brancher : page de réinitialisation.');return false;">Mot de passe oublié ?</a>
+                    </p>
+                </form>
+            </div>
+        </section>
+    </main>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.showpass').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    const inp = btn.parentElement.querySelector('input');
+                    if(!inp) return;
+                    inp.type = inp.type === 'password' ? 'text' : 'password';
+                });
+            });
+        });
+    </script>
+{% endblock %}

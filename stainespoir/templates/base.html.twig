@@ -1,17 +1,221 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        {% block stylesheets %}
-        {% endblock %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stains Espoir — {% block title %}Accueil{% endblock %}</title>
+    <meta name="description" content="STAINS ESPOIR — Association à but non lucratif : éducation, culture, citoyenneté et solidarité à Stains. Votre réussite, c’est notre devoir.">
 
-        {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
-        {% endblock %}
-    </head>
-    <body>
-        {% block body %}{% endblock %}
-    </body>
+    {% block stylesheets %}
+    {% endblock %}
+
+    {% block javascripts %}
+        {% block importmap %}{{ importmap('app') }}{% endblock %}
+    {% endblock %}
+
+    <link rel="icon" type="image/svg+xml" href="#favicon" />
+    <meta name="color-scheme" content="light">
+    <script>
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body class="home">
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+
+<!-- Barre haute (contact + réseaux) -->
+<div class="topbar">
+    <div class="container topbar-row">
+        <div class="topbar-left">
+            <span class="small">
+                📞 {{ setting('site.phone')|u.replaceMatches('/\D+/', '')|u.replaceMatches('/(\d{2})(?=\d)/', '$1 ')|trim }}
+            </span>
+            <span class="sep" aria-hidden="true">•</span>
+            <a class="small" href="mailto:{{ setting('site.email') }}">{{ setting('site.email') }}</a>
+        </div>
+        <div class="topbar-right">
+            <a class="social" target="_blank" href="{{ setting('social.instagram_url') }}" aria-label="Instagram">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3.5a5.5 5.5 0 1 1 0 11.001 5.5 5.5 0 0 1 0-11Zm0 2a3.5 3.5 0 1 0 .001 7.001A3.5 3.5 0 0 0 12 9.5ZM18 6.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
+                <span class="small">Instagram</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% set currentRoute = app.request.attributes.get('_route') %}
+
+<header class="site-header">
+    <div class="container header-row">
+        <a href="{{ path('app_home') }}" class="brand" aria-label="Accueil Stains Espoir">
+            <img src="{{ asset('images/logo-FINAL-1.png') }}" class="brand-logo" alt="Stains Espoir — logo" />
+            <span class="brand-name">Stains&nbsp;Espoir</span>
+        </a>
+
+        <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="Menu">
+            <span class="sr-only">Menu</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+
+        <nav id="siteNav" class="primary-nav" aria-label="Navigation principale">
+            <ul>
+                {% for item in main_nav %}
+                    {% set isActive = (currentRoute == item.route) %}
+                    {% if not isActive and item.active_when is defined %}
+                        {% for pat in item.active_when %}
+                            {% if currentRoute matches '/' ~ pat ~ '/' %}
+                                {% set isActive = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    <li>
+                        <a href="{{ path(item.route) }}"
+                           class="{{ isActive ? 'active' }}"
+                           {% if isActive %}aria-current="page"{% endif %}>
+                            {{ item.label }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <div class="nav-backdrop" id="navBackdrop" hidden></div>
+    </div>
+</header>
+
+
+{% block body %}{% endblock %}
+
+
+<footer class="site-footer creative-footer" aria-label="Pied de page">
+    <div class="container footer-top">
+        <div class="ft-brand">
+            <a href="/" class="brand brand-footer">
+                <img src="images/logo-FINAL-1.png" class="brand-logo-small" alt="Stains Espoir" />
+                <span class="brand-name">Stains&nbsp;Espoir</span>
+            </a>
+            <p class="small tagline">Votre réussite, c’est notre devoir.</p>
+
+        </div>
+
+        <nav class="ft-nav" aria-label="Navigation pied de page">
+            <h3 class="ft-title">Navigation</h3>
+            <ul role="list">
+                <li><a href="/association">L’association</a></li>
+                <li><a href="/evenements">Événements</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/adherer">Adhérer</a></li>
+                <li><a href="/benevole">Devenir bénévole</a></li>
+            </ul>
+        </nav>
+
+
+        <div class="ft-contact">
+            <h3 class="ft-title">Nous contacter</h3>
+            <ul class="info-list" role="list">
+                <li>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+                    <div>
+                        <strong>Adresse</strong>
+                        <p>6 Avenue Jules Guesde<br>93240 Stains</p>
+                    </div>
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v.4l-9 5.6-9-5.6V5Zm0 3.2V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.2l-8.4 5.2a3 3 0 0 1-3.2 0L3 8.2Z"/></svg>
+                    <div>
+                        <strong>Email</strong>
+                        <p><a class="text-link" href="mailto:{{ setting('site.email') }}">{{ setting('site.email') }}</a></p>
+                    </div>
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a13.8 13.8 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.36 2.3.55 3.6.55a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.8 21 3 13.2 3 3a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.3.19 2.5.55 3.6a1 1 0 0 1-.25 1l-2.2 2.2Z"/></svg>
+                    <div>
+                        <strong>Téléphone</strong>
+                        <p><a class="text-link" href="tel:+{{ setting('site.phone')|trim }}">{{ setting('site.phone')|u.replaceMatches('/\D+/', '')|u.replaceMatches('/(\d{2})(?=\d)/', '$1 ')|trim }}</a></p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+
+        <div class="container footer-bottom-row">
+            <p class="small">© <span id="year"></span> Stains Espoir — Association loi 1901.</p>
+            <div class="ft-legal">
+                <a href="/mentions-legales">Mentions légales</a>
+                <span aria-hidden="true">·</span>
+                <a href="/contact">Contact</a>
+            </div>
+        </div>
+    </div></footer>
+
+
+<!-- Données structurées -->
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "NGO",
+        "name": "Stains Espoir",
+        "address": "6 Avenue Jules Guesde, 93240 Stains",
+        "email": "stains.espoir@gmail.com",
+        "areaServed": "Stains, France",
+        "url": "https://stains-espoir.fr/"
+    }
+</script>
+
+<script>
+    // JS minimal: menu mobile + année
+    (function () {
+        const navToggle = document.getElementById('navToggle');
+        const siteNav = document.getElementById('siteNav');
+        const backdrop = document.getElementById('navBackdrop');
+        const yearEl = document.getElementById('year');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+        function openNav() {
+            siteNav.classList.add('open');
+            backdrop && (backdrop.hidden = false);
+            document.body.classList.add('no-scroll');
+            navToggle.setAttribute('aria-expanded', 'true');
+        }
+        function closeNav() {
+            siteNav.classList.remove('open');
+            backdrop && (backdrop.hidden = true);
+            document.body.classList.remove('no-scroll');
+            navToggle.setAttribute('aria-expanded', 'false');
+        }
+
+        navToggle && navToggle.addEventListener('click', () => {
+            const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+            expanded ? closeNav() : openNav();
+        });
+
+        siteNav && siteNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
+        backdrop && backdrop.addEventListener('click', closeNav);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeNav();
+        });
+    })();
+</script>
+
+<!-- Gradients -->
+<svg width="0" height="0" style="position:absolute">
+    <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#6A1B9A"/>
+            <stop offset="1" stop-color="#B36AD1"/>
+        </linearGradient>
+    </defs>
+</svg>
+
+<!-- Favicon (optionnel) -->
+<svg id="favicon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display:none">
+    <defs><linearGradient id="gfav" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6A1B9A"/><stop offset="1" stop-color="#B36AD1"/></linearGradient></defs>
+    <rect x="2" y="2" width="44" height="44" rx="10" fill="url(#gfav)" />
+</svg>
+</body>
 </html>
