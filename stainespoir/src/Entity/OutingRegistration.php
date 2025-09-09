@@ -22,6 +22,31 @@ class OutingRegistration
 
     #[ORM\Column(type:'text', nullable:true)] private ?string $notes = null;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $signedAt = null;
+
+    #[ORM\Column(length: 160, nullable: true)]
+    private ?string $signatureName = null;
+
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $signaturePhone = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $healthNotes = null;
+
+
+    public function getSignedAt(): ?\DateTimeImmutable { return $this->signedAt; }
+    public function setSignedAt(?\DateTimeImmutable $dt): self { $this->signedAt = $dt; return $this; }
+
+    public function getSignatureName(): ?string { return $this->signatureName; }
+    public function setSignatureName(?string $v): self { $this->signatureName = $v; return $this; }
+
+    public function getSignaturePhone(): ?string { return $this->signaturePhone; }
+    public function setSignaturePhone(?string $v): self { $this->signaturePhone = $v; return $this; }
+
+    public function getHealthNotes(): ?string { return $this->healthNotes; }
+    public function setHealthNotes(?string $v): self { $this->healthNotes = $v; return $this; }
+
     public function getId():?int {return $this->id;}
     public function getChild():?Child {return $this->child;}
     public function setChild(Child $c):self {$this->child=$c;return $this;}

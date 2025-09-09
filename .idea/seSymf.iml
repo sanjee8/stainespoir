@@ -6,9 +6,11 @@
       <sourceFolder url="file://$MODULE_DIR$/stainespoir/tests" isTestSource="true" packagePrefix="App\Tests\" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/composer" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/collections" />
+      <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/data-fixtures" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/dbal" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/deprecations" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/doctrine-bundle" />
+      <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/doctrine-fixtures-bundle" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/doctrine-migrations-bundle" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/event-manager" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/inflector" />
@@ -19,6 +21,7 @@
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/persistence" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/doctrine/sql-formatter" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/egulias/email-validator" />
+      <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/fakerphp/faker" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/masterminds/html5" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/monolog/monolog" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/myclabs/deep-copy" />

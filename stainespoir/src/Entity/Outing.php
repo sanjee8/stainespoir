@@ -14,6 +14,20 @@ class Outing
     #[ORM\Column(length:160, nullable:true)] private ?string $location = null;
     #[ORM\Column(type:'text', nullable:true)] private ?string $description = null;
 
+    #[ORM\Column(length: 1024, nullable: true)]
+    private ?string $imageUrl = null;
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): self
+    {
+        $this->imageUrl = $imageUrl;
+        return $this;
+    }
+
     public function getId():?int {return $this->id;}
     public function getTitle():string {return $this->title;}
     public function setTitle(string $t):self {$this->title=$t;return $this;}

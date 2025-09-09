@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+{% block title %}Autoriser la sortie — {{ reg.outing.title }}{% endblock %}
+
+{% block body %}
+    <main class="account">
+        <section class="section">
+            <div class="container" style="max-width:800px">
+                <a class="btn ghost" href="{{ path('app_account', { enfant: reg.child.id, tab: 'sorties' }) }}">← Retour aux sorties</a>
+
+                <article class="card" style="margin-top:14px">
+                    <div class="card-head"><b>Autorisation parentale</b></div>
+                    <p style="margin:.25rem 0 .75rem 0">
+                        <b>{{ reg.outing.title }}</b><br>
+                        {{ reg.outing.startsAt|date('d/m/Y') }} · 10h–12h — {{ reg.outing.location }}
+                    </p>
+
+                    <form method="post" action="{{ path('app_account_outing_sign', { id: reg.id }) }}" class="fstack" id="signForm">
+                        <input type="hidden" name="_token" value="{{ csrf_token('sign_outing_' ~ reg.id) }}">
+
+                        {# Rangée 1 : Nom & Téléphone #}
+                        <div class="grid-2">
+                            <label class="fgroup floating">
+                                <input type="text" name="name" id="sf_name" placeholder=" " value="{{ app.user.profile.firstName ~ ' ' ~ app.user.profile.lastName }}" required>
+                                <span>Nom et prénom du parent</span>
+                            </label>
+
+                            <label class="fgroup floating">
+                                <input type="tel" name="phone" id="sf_phone" placeholder=" " value="{{ app.user.profile.phone }}" required>
+                                <span>Téléphone</span>
+                            </label>
+                        </div>
+
+                        {# Rangée 2 : Infos santé en textarea, pleine largeur #}
+                        <label class="fgroup floating" style="margin-top:12px">
+                            <textarea name="health" id="sf_health" rows="4" placeholder=" "></textarea>
+                            <span>Infos santé (optionnel)</span>
+                        </label>
+
+                        {# Consentement légal obligatoire #}
+                        <label class="row" style="gap:10px; align-items:flex-start; margin-top:10px">
+                            <input type="checkbox" name="consent" required style="margin-top:4px">
+                            <span>J’autorise la participation de mon enfant à cette sortie et je certifie être son représentant légal.</span>
+                        </label>
+
+                        <div class="actions" style="margin-top:12px; gap:8px">
+                            <button class="btn primary" type="submit">Signer et autoriser</button>
+                            <a class="btn" href="{{ path('app_account', { enfant: reg.child.id, tab: 'sorties' }) }}">Annuler</a>
+                        </div>
+                    </form>
+                </article>
+            </div>
+        </section>
+    </main>
+{% endblock %}
+
+{# Pas de javascripts spécifiques ici #}

@@ -1,105 +1,214 @@
 {% extends 'base.html.twig' %}
 {% block title %}Mon compte — Espace parent{% endblock %}
-
-{# === CSS : on garde le global + on ajoute le thème "account" de ta maquette === #}
 {% block stylesheets %}
     {{ parent() }}
-    {# Si tu as packagé account.css via AssetMapper : #}
-    <link rel="stylesheet" href="{{ asset('assets/styles/account.css') }}">
+    <style>
+        .past-grid{
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:16px;
+        }
+        @media (max-width: 780px){ .past-grid{ grid-template-columns:1fr } }
+
+        .past-card{
+            display:grid;
+            grid-template-columns:160px 1fr;
+            gap:14px;
+            align-items:stretch;
+        }
+        /* Sans image : passe en une seule colonne, corps full width */
+        .past-card.noimg{
+            grid-template-columns:1fr;
+        }
+        .past-card.noimg .pc-media{ display:none; }
+
+        .pc-media{
+            border-radius:12px; overflow:hidden; background:#f3f4f6;
+        }
+        .pc-media img{
+            display:block; width:100%; height:auto; object-fit:cover; aspect-ratio: 4 / 3;
+        }
+        /* Fallback si aspect-ratio non supporté */
+        @supports not (aspect-ratio: 1){
+            .pc-media{ position:relative; height:0; padding-bottom:75%; }
+            .pc-media img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        }
+
+        .pc-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px }
+        .pc-date{ font-weight:600 }
+        .pc-title{ margin:0 0 4px; font-size:1.05rem }
+        .pc-loc{ margin-bottom:6px }
+        .pc-desc{ margin:6px 0 8px }
+        .pc-meta{ font-size:.9em }
+
+        .badge{ display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid #e5e7eb; font-size:.85em }
+        .badge.ok{ background:#e8f8ee; color:#0a7a43; border-color:#b8e6c9 }
+        .badge.no{ background:#feecec; color:#b42318; border-color:#f3b4b0 }
+        .badge.warn{ background:#fff7e6; color:#a15c00; border-color:#ffd591 }
+        .badge.ghost{ background:#f3f4f6; color:#6b7280; border-color:#e5e7eb }
+    </style>
 {% endblock %}
 
-{% block body %}
-    <main id="contenu" class="account">
-        {# ===== HERO (identique à ta maquette) ===== #}
-        <section class="account-hero">
-            <div class="container">
-                <div class="hero-row">
-                    <div class="hero-left">
-                        <span class="pill">👨‍👩‍👧 Espace parents</span>
-                        <h1>Mon compte</h1>
-                        <p class="lead">Suivez les <strong>présences</strong>, les <strong>sorties</strong> et vos <strong>messages</strong> avec l’équipe.</p>
-                        <div class="chips">
-                            <span class="chip">Samedi 10h–12h</span>
-                            <span class="chip">Maison des associations</span>
-                            <span class="chip">Stains</span>
-                        </div>
-                    </div>
 
-                    <aside class="hero-right">
-                        <label class="fgroup floating selectKid">
-                            <select id="kidSelect" aria-label="Choisir un enfant">
+{% block body %}
+    <main class="account">
+        <section class="account-hero">
+            <div class="container hero-row">
+                <div class="hero-left">
+                    <span class="pill">👨‍👩‍👧 Espace parents</span>
+                    <h1>Mon compte</h1>
+                    <p class="lead">Suivez les <strong>présences</strong>, les <strong>sorties</strong> et vos <strong>messages</strong>.</p>
+                </div>
+
+                <aside class="hero-right">
+                    <form method="get" action="{{ path('app_account') }}" class="row" style="gap:10px;align-items:center">
+                        <label class="fgroup floating selectKid" style="min-width:260px">
+                            <select name="enfant" onchange="this.form.submit()">
                                 {% for k in kids %}
-                                    <option value="{{ k.id }}" {{ k.id == current.id ? 'selected' }}>{{ k.firstName }} {{ k.lastName }} — {{ k.level ?? '' }}</option>
+                                    <option value="{{ k.id }}" {{ k.id==current.id ? 'selected' }}>
+                                        {{ k.firstName }} {{ k.lastName }} — {{ k.level ?? '' }}
+                                    </option>
                                 {% endfor %}
                             </select>
                             <span>Enfant</span>
                         </label>
+                        <input type="hidden" name="tab" value="{{ tab }}">
+                        <noscript><button class="btn">Voir</button></noscript>
+                    </form>
 
-                        <div class="kpi-circles">
-                            <div class="circle" data-val="0" title="Présences ce mois"></div>
-                            <div class="circle" data-val="0" title="Absences ce mois"></div>
-                            <div class="circle" data-val="0" data-max="5" title="Sorties à venir"></div>
+                    <div class="kpi-circles">
+                   
+                        <div class="circle" style="--p: {{ data.presencePct30|default(0) }};" data-val="{{ data.presencePct30|default(0) }}">
+                            <b>{{ data.presentCount30|default(0) }}</b>
+                            <span>Présences</span>
                         </div>
-                    </aside>
-                </div>
+
+
+                        <div class="circle" style="--p: {{ data.absencePct30|default(0) }};" data-val="{{ data.absencePct30|default(0) }}">
+                            <b>{{ data.absentCount30|default(0) }}</b>
+                            <span>Absences</span>
+                        </div>
+
+
+                        <div class="circle" style="--p: {{ data.signedRate|default(0) }};" data-val="{{ data.signedRate|default(0) }}">
+                            <b>{{ data.signedCount|default(0) }}/{{ data.totalUpcoming|default(0) }}</b>
+                            <span>Sorties</span>
+                        </div>
+                    </div>
+
+                </aside>
             </div>
         </section>
 
-        {# ===== NAV TABS (hash, comme ta page) ===== #}
         <section class="section tabs">
             <div class="container">
-                <nav class="tabs-nav" aria-label="Sections du tableau de bord">
-                    <a href="#overview" class="active">Vue d’ensemble</a>
-                    <a href="#presences">Présences</a>
-                    <a href="#sorties">Sorties</a>
-                    <a href="#messages">Messages</a>
-                    <a href="#settings">Paramètres</a>
+                <nav class="tabs-nav" aria-label="Sections">
+                    <a class="{{ tab=='overview'  ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'overview'}) }}">Vue d’ensemble</a>
+                    <a class="{{ tab=='presences' ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'presences'}) }}">Présences</a>
+                    <a class="{{ tab=='sorties'   ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'sorties'}) }}">Sorties</a>
+                    <a class="{{ tab=='messages'  ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'messages'}) }}">Messages</a>
+                    <a class="{{ tab=='settings'  ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'settings'}) }}">Paramètres</a>
                 </nav>
             </div>
         </section>
 
-        {# ===== PANELS ===== #}
         <section class="section">
             <div class="container">
 
-                {# OVERVIEW #}
-                <div class="tab-panel" id="overview">
+                {# ===== OVERVIEW ===== #}
+                {% if tab == 'overview' %}
                     <div class="grid-3">
-                        <article class="card ov-next">
-                            <div class="card-head"><b>Prochaine séance</b><span class="badge ok" id="nextSlot"></span></div>
-                            <p>Présence prévue : <span class="badge ghost" id="ovPresence">—</span></p>
-                            <p class="muted">Maison des associations — 6 av. Jules Guesde</p>
+                        <article class="card">
+                            <div class="card-head"><b>Prochaine séance</b></div>
+                            <p>Samedi prochain — présence prévue :
+                                <span class="badge ghost">{{ (data.presenceRate30 ?? 0) >= 50 ? 'Plutôt présent' : 'Plutôt absent' }}</span>
+                            </p>
+                            <p class="muted">Maison des associations — Stains</p>
                         </article>
 
-                        {# Remplacement de "Dernières notes" → "Messages récents" #}
-                        <article class="card ov-news">
-                            <div class="card-head"><b>Messages récents</b></div>
-                            <ul class="notes" id="ovMsgs"></ul>
-                        </article>
 
                         <article class="card">
                             <div class="card-head"><b>Sorties à venir</b></div>
-                            <ul class="clean" id="ovSorties"></ul>
+                            <ul class="clean">
+                                {% set up3 = data.upcoming|slice(0,3) %}
+                                {% if up3 is not empty %}
+                                    {% for r in up3 %}
+                                        <li>{{ r.outing.startsAt|date('d/m') }} — {{ r.outing.title }}</li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="muted">Aucune sortie programmée.</li>
+                                {% endif %}
+                            </ul>
                             <div class="actions">
-                                <a class="btn ghost" href="#sorties">Voir toutes les sorties</a>
+                                <a class="btn ghost" href="{{ path('app_account', {enfant: current.id, tab:'sorties'}) }}">Voir les sorties</a>
                             </div>
                         </article>
                     </div>
-                </div>
+                {% endif %}
 
-                {# PRESENCES (calendrier) #}
-                <div class="tab-panel" id="presences" hidden>
+                {# ===== PRESENCES — calendrier serveur (mêmes éléments visuels) ===== #}
+                {% if tab == 'presences' and data.cal %}
                     <div class="panel-head">
                         <h2>Présences — Calendrier</h2>
                         <p class="muted">Lecture seule — les statuts sont saisis par l’équipe Stains Espoir.</p>
                     </div>
+
+                    <form method="get" action="{{ path('app_account') }}" class="row" style="gap:10px;align-items:center;margin-bottom:12px">
+                        <input type="hidden" name="enfant" value="{{ current.id }}">
+                        <input type="hidden" name="tab" value="presences">
+                        <label class="fgroup floating">
+                            {% set y = data.schoolYear %}
+                            <select name="annee" onchange="this.form.submit()">
+                                {% for yy in [y-1, y, y+1] %}
+                                    <option value="{{ yy }}" {{ yy==y ? 'selected' }}>{{ yy }}–{{ yy+1 }}</option>
+                                {% endfor %}
+                            </select>
+                            <span>Année scolaire</span>
+                        </label>
+                        <noscript><button class="btn">Aller</button></noscript>
+                    </form>
+
                     <div class="card cal">
                         <div class="cal-head">
-                            <button class="btn ghost cal-prev" type="button" aria-label="Mois précédent">←</button>
-                            <div class="cal-title" id="calTitle"></div>
-                            <button class="btn ghost cal-next" type="button" aria-label="Mois suivant">→</button>
+                            {# flèches server-side, clampées à l’année scolaire #}
+                            {% if data.cal.prev %}
+                                <a class="btn cal-prev" href="{{ path('app_account', { enfant: current.id, tab: 'presences', annee: data.schoolYear, mois: data.cal.prev }) }}" aria-label="Mois précédent">←</a>
+                            {% else %}
+                                <span class="btn cal-prev" aria-disabled="true">←</span>
+                            {% endif %}
+
+                            <div class="cal-title">{{ data.cal.label|capitalize }}</div>
+
+                            {% if data.cal.next %}
+                                <a class="btn cal-next" href="{{ path('app_account', { enfant: current.id, tab: 'presences', annee: data.schoolYear, mois: data.cal.next }) }}" aria-label="Mois suivant">→</a>
+                            {% else %}
+                                <span class="btn cal-next" aria-disabled="true">→</span>
+                            {% endif %}
                         </div>
-                        <div class="cal-grid" id="calGrid" aria-label="Calendrier mensuel"></div>
+
+                        <div class="cal-grid" aria-label="Calendrier mensuel">
+                            {% set dayNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+                            {% for name in dayNames %}
+                                <div class="cal-dayname">{{ name }}</div>
+                            {% endfor %}
+
+                            {% for i in 1..data.cal.startPad %}
+                                <div class="cal-cell empty"></div>
+                            {% endfor %}
+
+                            {% for d in data.cal.days %}
+                                <div class="cal-cell {{ d.isSaturday ? 'sat' }}">
+                                    <div class="cal-num">{{ d.d }}</div>
+                                    {% if d.isSaturday %}
+                                        {% set st = d.status %}
+                                        {% set label = st == 'present' ? 'Présent' : (st == 'absent' ? 'Absent' : (st in ['late','excused'] ? 'À confirmer' : '—')) %}
+                                        {% set cls   = st == 'present' ? 'yes'     : (st == 'absent' ? 'no'     : (st in ['late','excused'] ? 'maybe'       : 'none')) %}
+                                        <div class="cal-status {{ cls }}">{{ label }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+
                         <div class="legend">
                             <span class="dot yes"></span> Présent
                             <span class="dot no"></span> Absent
@@ -107,28 +216,136 @@
                             <span class="dot none"></span> Non programmé
                         </div>
                     </div>
-                </div>
+                {% endif %}
 
-                {# SORTIES #}
-                <div class="tab-panel" id="sorties" hidden>
+                {# ===== SORTIES (sans JS nécessaire) ===== #}
+                {% if tab == 'sorties' %}
                     <div class="panel-head">
                         <h2>Sorties</h2>
                         <p class="muted">Autorisations parentales (lecture côté parent, envoi depuis le bouton).</p>
                     </div>
-                    <div class="out-grid" id="sortiesGrid"></div>
-                </div>
 
-                {# MESSAGES #}
-                <div class="tab-panel" id="messages" hidden>
-                    <div class="panel-head">
-                        <h2>Messages</h2>
-                        <p class="muted">Échanges avec l’équipe Stains Espoir.</p>
+                    <div class="out-grid">
+                        {% if data.upcoming is empty %}
+                            <p class="muted">Aucune sortie planifiée.</p>
+                        {% endif %}
+
+                        {% for r in data.upcoming %}
+                            {% set signed = r.signedAt or r.status in ['confirmed','attended'] %}
+                            <article class="out-ticket">
+                                {% if r.outing.imageUrl %}
+                                    <img src="{{ r.outing.imageUrl }}" alt="Image — {{ r.outing.title }}" class="ticket-cover">
+                                {% endif %}
+                                <div class="ribbon">Sortie</div>
+                                <div class="t-head">
+                                    <h3>{{ r.outing.title }}</h3>
+                                    <div class="t-date">{{ r.outing.startsAt|date('d/m/Y') }} · 10h–12h</div>
+                                </div>
+                                <div class="t-meta">{{ r.outing.location }}</div>
+                                <div class="out-actions">
+                                    {% if signed %}
+                                        <span class="badge ok">Signée</span>
+                                    {% else %}
+                                        {# ✅ Lien serveur vers la page de signature (marche même sans JS) #}
+                                        <a class="btn ghost" href="{{ path('app_account_outing_sign_form', { id: r.id }) }}">Autoriser la sortie</a>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
                     </div>
+
+                    {% if data.past is not empty %}
+                        <h3 style="margin-top:24px">Sorties passées</h3>
+
+                        <div class="past-grid">
+                            {% for r in data.past %}
+                                {% set o = r.outing %}
+                                {# image externe (http/https//) ou chemin local via asset(); sinon pas d'image #}
+                                {% set cover = null %}
+                                {% if o.imageUrl is defined and o.imageUrl %}
+                                    {% set isExternal = o.imageUrl starts with 'http://' or o.imageUrl starts with 'https://' or o.imageUrl starts with '//' %}
+                                    {% set cover = isExternal ? o.imageUrl : asset(o.imageUrl) %}
+                                {% endif %}
+
+                                {% set st = r.status|default('') %}
+                                {% set stLabel = {
+                                    'attended':'Présent',
+                                    'absent':'Absent',
+                                    'confirmed':'Signée',
+                                    'declined':'Refusée',
+                                    'cancelled':'Annulée'
+                                }[st]|default(st) %}
+                                {% set stClass = {
+                                    'attended':'ok',
+                                    'confirmed':'ok',
+                                    'absent':'no',
+                                    'declined':'no',
+                                    'cancelled':'warn'
+                                }[st]|default('ghost') %}
+
+                                <article class="card past-card {{ cover ? '' : 'noimg' }}">
+                                    {% if cover %}
+                                        <div class="pc-media">
+                                            <img src="{{ cover }}" alt="Image — {{ o.title }}">
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="pc-body">
+                                        <div class="pc-head">
+                                            <div class="pc-date">{{ o.startsAt|date('d/m/Y') }}</div>
+                                            <span class="badge {{ stClass }}">{{ stLabel }}</span>
+                                        </div>
+
+                                        <h4 class="pc-title">{{ o.title }}</h4>
+                                        {% if o.location %}
+                                            <div class="pc-loc muted">{{ o.location }}</div>
+                                        {% endif %}
+
+                                        {% if o.description is defined and o.description %}
+                                            {% set plain = o.description|striptags %}
+                                            <p class="pc-desc">{{ plain|length > 220 ? plain|slice(0,220) ~ '…' : plain }}</p>
+                                        {% endif %}
+
+                                        {% if r.signedAt %}
+                                            <div class="pc-meta muted">Autorisation signée le {{ r.signedAt|date('d/m/Y') }}</div>
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                {% endif %}
+
+                {# ===== MESSAGES ===== #}
+                {% if tab == 'messages' %}
+                    {% for label, msgs in app.flashes %}
+                        {% for m in msgs %}
+                            <div class="flash {{ label }}">{{ m }}</div>
+                        {% endfor %}
+                    {% endfor %}
+
                     <div class="msg-layout">
-                        <div class="card msg-list" id="msgList"></div>
-                        <form class="card msg-compose" id="msgForm">
+                        <div id="msgList" class="card msg-list" style="max-height:420px;overflow:auto">
+                            {% if data.messages is empty %}
+                                <p class="muted" style="margin:0">Aucun message.</p>
+                            {% else %}
+                                {% for m in data.messages %}
+                                    <div class="msg {{ m.from == 'staff' ? 'left' : 'right' }}">
+                                        <div class="bubble">{{ m.body }}</div>
+                                        <div class="when">
+                                            {{ m.createdAt|date('d/m/Y H:i') }}{% if not m.readAt %} · <span class="badge warn">Non lu</span>{% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <form class="card msg-compose" method="post" action="{{ path('app_account_message_send') }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('send_message') }}">
+                            <input type="hidden" name="child_id" value="{{ current.id }}">
                             <label class="fgroup floating wide">
-                                <textarea id="msgText" rows="3" placeholder=" "></textarea>
+                                <textarea name="text" rows="3" placeholder=" " required></textarea>
                                 <span>Votre message…</span>
                             </label>
                             <div class="actions">
@@ -136,41 +353,20 @@
                             </div>
                         </form>
                     </div>
-                </div>
+                {% endif %}
 
-                {# PARAMÈTRES #}
-                <div class="tab-panel" id="settings" hidden>
-                    <div class="panel-head">
-                        <h2>Paramètres du compte</h2>
-                        <p class="muted">Profil & enfants rattachés (lecture seule).</p>
-                    </div>
-
+                {# ===== PARAMETRES ===== #}
+                {% if tab == 'settings' %}
                     <div class="grid-2">
-                        <form class="card" id="profileForm">
+                        <div class="card">
                             <b>Profil parent</b>
                             <div class="grid-2">
-                                <label class="fgroup floating">
-                                    <input type="text" id="pf_prenom" placeholder=" " value="{{ app.user.profile.firstName ?? '' }}" disabled>
-                                    <span>Prénom</span>
-                                </label>
-                                <label class="fgroup floating">
-                                    <input type="text" id="pf_nom" placeholder=" " value="{{ app.user.profile.lastName ?? '' }}" disabled>
-                                    <span>Nom</span>
-                                </label>
-                                <label class="fgroup floating">
-                                    <input type="email" id="pf_email" placeholder=" " value="{{ app.user.email }}" disabled>
-                                    <span>Email</span>
-                                </label>
-                                <label class="fgroup floating">
-                                    <input type="tel" id="pf_tel" placeholder=" " value="{{ app.user.profile.phone ?? '' }}" disabled>
-                                    <span>Téléphone</span>
-                                </label>
+                                <div><div class="muted">Prénom</div><div><b>{{ app.user.profile.firstName }}</b></div></div>
+                                <div><div class="muted">Nom</div><div><b>{{ app.user.profile.lastName }}</b></div></div>
+                                <div><div class="muted">Email</div><div>{{ app.user.email }}</div></div>
+                                <div><div class="muted">Téléphone</div><div>{{ app.user.profile.phone }}</div></div>
                             </div>
-                            <div class="actions">
-                                <a class="btn ghost" href="{{ path('app_logout') }}">Déconnexion</a>
-                            </div>
-                        </form>
-
+                        </div>
                         <div class="card">
                             <b>Enfants rattachés</b>
                             <div class="kid-mini-list">
@@ -178,213 +374,19 @@
                                     <div class="kid-mini"><b>{{ k.firstName }} {{ k.lastName }}</b> — {{ k.level ?? '' }}</div>
                                 {% endfor %}
                             </div>
-                            <p class="muted" style="margin-top:8px;">Pour modifier la liste, merci de contacter l’équipe.</p>
                         </div>
                     </div>
-                </div>
+                {% endif %}
 
             </div>
         </section>
     </main>
-
-    {# ===== MODALE : Autorisation de sortie (même markup) ===== #}
-    <div class="modal modal-full" id="authModal" hidden aria-hidden="true" role="dialog" aria-labelledby="authTitle">
-        <div class="modal-dialog">
-            <button class="modal-close" data-close aria-label="Fermer">×</button>
-            <h3 id="authTitle">Autorisation de sortie</h3>
-            <p class="muted" id="authSubtitle"></p>
-            <form id="authForm" class="fstack" novalidate>
-                <label class="fgroup floating">
-                    <input type="text" id="au_parent" placeholder=" " required value="{{ (app.user.profile.firstName ~ ' ' ~ app.user.profile.lastName)|trim }}">
-                    <span>Nom et prénom du parent</span>
-                </label>
-                <label class="fgroup floating">
-                    <input type="tel" id="au_tel" placeholder=" " required value="{{ app.user.profile.phone ?? '' }}">
-                    <span>Téléphone</span>
-                </label>
-                <label class="fgroup floating wide">
-                    <textarea id="au_sante" rows="3" placeholder=" "></textarea>
-                    <span>Informations médicales / allergies (optionnel)</span>
-                </label>
-                <label class="check">
-                    <input type="checkbox" id="au_ok" required>
-                    <span>J’autorise la participation de mon enfant et je certifie être le représentant légal.</span>
-                </label>
-                <div class="actions">
-                    <button class="btn" type="submit">Envoyer l’autorisation</button>
-                    <button class="btn outline" type="button" data-close>Annuler</button>
-                    <button class="btn ghost" type="button" id="au_print">Imprimer</button>
-                </div>
-                <p class="form-msg" id="authMsg"></p>
-            </form>
-        </div>
-    </div>
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
     <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            // --- Données Twig (déjà présentes dans ta page) ---
-            const PRESENCE_RATE_30 = {{ (data.presenceRate30 ?? 0)|number_format(1, '.', '') }}; // 0..100
-            const OUT_UP = [
-                {% for r in (data.upcomingOutings ?? data.registrations ?? []) %}
-                { id: {{ r.outing.id }}, titre: {{ r.outing.title|json_encode|raw }}, date: {{ r.outing.startsAt|date('c')|json_encode|raw }}, lieu: {{ (r.outing.location ?? '')|json_encode|raw }}, status: {{ r.status|json_encode|raw }} }{{ not loop.last ? ',' : '' }}
-                {% endfor %}
-            ];
-            const MSGS = [
-                {% for m in (data.messages ?? []) %}
-                { id: {{ m.id }}, from: {{ (m.sender == 'staff' ? 'equipe' : 'parent')|json_encode|raw }}, t: {{ m.createdAt|date('U') }}*1000, txt: {{ m.body|json_encode|raw }} }{{ not loop.last ? ',' : '' }}
-                {% endfor %}
-            ];
-
-            // --- Sélecteur d'enfant : recharge la page (et garde l'onglet via hash) ---
-            const kidSelect = document.getElementById('kidSelect');
-            kidSelect?.addEventListener('change', ()=>{
-                const id = kidSelect.value;
-                const hash = location.hash || '#overview';
-                const base = "{{ path('app_account', {'tab': tab}) }}";
-                location.href = base + "?enfant=" + encodeURIComponent(id) + hash;
-            });
-
-            // --- Onglets (hash) ---
-            const links  = Array.from(document.querySelectorAll('.tabs-nav a'));
-            const panels = Array.from(document.querySelectorAll('.tab-panel'));
-            function openTab(hash){
-                if (!hash) hash = '#overview';
-                links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === hash));
-                panels.forEach(p => p.hidden = ('#'+p.id) !== hash);
-                // appels de rendu par onglet (évite erreurs si éléments absents)
-                if (hash === '#overview') { renderOverview(); paintCircles(); }
-                if (hash === '#presences') { drawCalendarSafely(); paintCircles(); }
-                if (hash === '#sorties') { renderSorties(); paintCircles(); }
-                if (hash === '#messages') { renderMessages(); }
-            }
-            // Laisse le comportement natif (le hash change) et on réagit sur hashchange
-            links.forEach(a => a.addEventListener('click', () => setTimeout(()=>openTab(location.hash), 0)));
-            window.addEventListener('hashchange', () => openTab(location.hash));
-            openTab(location.hash);
-
-            // --- KPI circles : calcul en % dépendant de l'enfant courant ---
-            function paintCircles(){
-                const signed = OUT_UP.filter(o => o.status === 'confirmed' || o.status === 'attended').length;
-                const total  = OUT_UP.length;
-                const outingsRate = total ? Math.round((signed / total) * 100) : 0;
-
-                const presence = Math.max(0, Math.min(100, Math.round(PRESENCE_RATE_30)));
-                const absences = Math.max(0, Math.min(100, 100 - presence));
-
-                const circles = document.querySelectorAll('.kpi-circles .circle');
-                if (circles[0]) {
-                    circles[0].style.setProperty('--p', presence);
-                    circles[0].innerHTML = `<b>${presence}%</b><span>Présences (30j)</span>`;
-                }
-                if (circles[1]) {
-                    circles[1].style.setProperty('--p', absences);
-                    circles[1].innerHTML = `<b>${absences}%</b><span>Absences (30j)</span>`;
-                }
-                if (circles[2]) {
-                    circles[2].style.setProperty('--p', outingsRate);
-                    circles[2].innerHTML = `<b>${outingsRate}%</b><span>Sorties signées</span>`;
-                }
-            }
-
-            // --- OVERVIEW ---
-            function renderOverview(){
-                // Prochaine séance (samedi suivant) + statut prévu selon données
-                const nxt = nextSaturday(new Date());
-                document.getElementById('nextSlot')?.replaceChildren(
-                    document.createTextNode(nxt.toLocaleDateString('fr-FR', {weekday:'long', day:'2-digit', month:'long'}))
-                );
-                // Badge "Présence prévue" : on utilise la moyenne 30j pour donner une indication
-                const ovPresence = document.getElementById('ovPresence');
-                if (ovPresence) ovPresence.textContent = PRESENCE_RATE_30 >= 50 ? 'Plutôt présent' : 'Plutôt absent';
-
-                // Messages récents
-                const list = (MSGS||[]).slice().sort((a,b)=>b.t-a.t).slice(0,5);
-                const ov = document.getElementById('ovMsgs');
-                if (ov) ov.innerHTML = list.length
-                    ? list.map(n => `<li>${new Date(n.t).toLocaleDateString('fr-FR')} — ${n.txt}</li>`).join('')
-                    : '<li class="muted">Aucun message récent.</li>';
-
-                // 3 prochaines sorties
-                const soon = (OUT_UP||[]).slice().sort((a,b)=> new Date(a.date)-new Date(b.date)).slice(0,3);
-                const ovS = document.getElementById('ovSorties');
-                if (ovS) ovS.innerHTML = soon.length
-                    ? soon.map(s => `<li>${new Date(s.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} — ${s.titre}</li>`).join('')
-                    : '<li class="muted">Aucune sortie programmée.</li>';
-            }
-            function nextSaturday(from){
-                const d = new Date(from); const add = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate()+add); d.setHours(0,0,0,0); return d;
-            }
-
-            // --- CALENDRIER (version "safe" : ne plante pas si les éléments ne sont pas présents) ---
-            function drawCalendarSafely(){
-                const calGrid  = document.getElementById('calGrid');
-                const calTitle = document.getElementById('calTitle');
-                const prevBtn  = document.querySelector('.cal-prev');
-                const nextBtn  = document.querySelector('.cal-next');
-                if (!calGrid || !calTitle || !prevBtn || !nextBtn) return;
-
-                const today = new Date();
-                let viewYear = today.getFullYear(), viewMonth = today.getMonth();
-
-                prevBtn.onclick = () => { viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} draw(); };
-                nextBtn.onclick = () => { viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} draw(); };
-
-                function monthLabel(y,m){ return new Date(y,m,1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' }); }
-                function firstWeekdayIndex(y,m){ const d = new Date(y,m,1); return (d.getDay()+6)%7; } // lundi=0
-                function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
-                function draw(){
-                    calTitle.textContent = monthLabel(viewYear, viewMonth);
-                    const startPad = firstWeekdayIndex(viewYear, viewMonth);
-                    const dim = daysInMonth(viewYear, viewMonth);
-                    const dayNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-                    let html = dayNames.map(n=>`<div class="cal-dayname">${n}</div>`).join('');
-                    for(let i=0;i<startPad;i++) html += `<div class="cal-cell empty"></div>`;
-                    for(let d=1; d<=dim; d++){
-                        const date = new Date(viewYear,viewMonth,d);
-                        const isSat = date.getDay()===6;
-                        html += `<div class="cal-cell ${isSat?'sat':''}">
-              <div class="cal-num">${d}</div>
-              ${isSat?`<div class="cal-status none">—</div>`:''}
-            </div>`;
-                    }
-                    calGrid.innerHTML = html;
-                }
-                draw();
-            }
-
-            // --- SORTIES (liste + modale autorisation) ---
-            function renderSorties(){
-                const wrap = document.getElementById('sortiesGrid');
-                if (!wrap) return;
-                const items = (OUT_UP||[]).slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
-                wrap.innerHTML = items.length ? items.map(s=>`
-          <article class="out-ticket">
-            <div class="ribbon">Sortie</div>
-            <div class="t-head">
-              <h3>${s.titre}</h3>
-              <div class="t-date">${new Date(s.date).toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long' })} · 10h–12h</div>
-            </div>
-            <div class="t-meta">${s.lieu || ''}</div>
-          </article>
-        `).join('') : '<p class="muted">Aucune sortie planifiée.</p>';
-            }
-
-            // --- MESSAGES (read-only côté parent ici) ---
-            function renderMessages(){
-                const box = document.getElementById('msgList');
-                if (!box) return;
-                const arr = (MSGS||[]).slice().sort((a,b)=>a.t-b.t);
-                box.innerHTML = arr.map(m=>`
-          <div class="msg ${m.from==='equipe'?'left':'right'}">
-            <div class="bubble">${m.txt}</div>
-            <div class="when">${new Date(m.t).toLocaleString('fr-FR')}</div>
-          </div>`).join('');
-                box.scrollTop = box.scrollHeight;
-            }
-        });
+        // Messages : ancrer le scroll en bas (optionnel)
+        (function(){ var box=document.getElementById('msgList'); if(box) box.scrollTop=box.scrollHeight; })();
     </script>
 {% endblock %}
-
