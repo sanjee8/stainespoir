@@ -1,0 +1,94 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content %}
+    {% for label, msgs in app.flashes %}
+        {% for m in msgs %}<div class="alert alert-{{ label }}">{{ m }}</div>{% endfor %}
+    {% endfor %}
+
+    {% set prof = profile %}
+
+    <h1 style="margin-bottom:8px">Dossier — Parent en attente</h1>
+    <p class="text-muted">Vérifiez les informations de l’inscription puis validez/refusez.</p>
+
+    <section class="content-panel">
+        <div class="row">
+            <div class="col-12 col-lg-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Informations du parent</h5>
+                        <dl class="row mb-0">
+                            <dt class="col-5">Nom</dt><dd class="col-7">{{ prof ? prof.lastName : '—' }}</dd>
+                            <dt class="col-5">Prénom</dt><dd class="col-7">{{ prof ? prof.firstName : '—' }}</dd>
+                            <dt class="col-5">Email</dt><dd class="col-7">{{ parent.email }}</dd>
+                            <dt class="col-5">Téléphone</dt><dd class="col-7">{{ prof and prof.phone ? prof.phone : '—' }}</dd>
+                            <dt class="col-5">Adresse</dt><dd class="col-7">{{ prof and prof.address ? prof.address : '—' }}</dd>
+                            <dt class="col-5">Code postal</dt><dd class="col-7">{{ prof and prof.postalCode ? prof.postalCode : '—' }}</dd>
+                            <dt class="col-5">Ville</dt><dd class="col-7">{{ prof and prof.city ? prof.city : '—' }}</dd>
+                            <dt class="col-5">Lien avec l’enfant</dt><dd class="col-7">{{ relationLabel ?: '—' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Enfants renseignés</h5>
+
+                        <form method="post">
+                            <input type="hidden" name="_token" value="{{ csrf_token(token_id) }}">
+
+                            {% if children is empty %}
+                                <p class="text-muted mb-3">Aucun enfant saisi par ce parent.</p>
+                            {% else %}
+                                <p class="small text-muted">Cochez les enfants à <strong>valider</strong>. Les autres seront <strong>supprimés</strong> si vous validez le compte.</p>
+                                <div class="table-responsive">
+                                    <table class="table align-middle">
+                                        <thead>
+                                        <tr>
+                                            <th style="width:1%">Valider</th>
+                                            <th>Nom prénom</th>
+                                            <th>Niveau</th>
+                                            <th>Naissance</th>
+                                            <th>Établissement</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for c in children %}
+                                            <tr>
+                                                <td>
+                                                    <input class="form-check-input" type="checkbox" name="approved_children[]" value="{{ c.id }}"
+                                                        {{ c.approved ? 'checked' }}>
+                                                </td>
+                                                <td><strong>{{ c.firstName }} {{ c.lastName }}</strong></td>
+                                                <td>{{ c.level ?: '—' }}</td>
+                                                <td>{{ c.dob ?: '—' }}</td>
+                                                <td>{{ c.school ?: '—' }}</td>
+                                                <td>{{ c.notes ?: '—' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% endif %}
+
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn btn-success" type="submit" name="decision" value="approve">Valider le compte</button>
+                                <button class="btn btn-outline-danger" type="submit" name="decision" value="reject"
+                                        onclick="return confirm('Refuser et supprimer ce parent et tous ses enfants ?')">
+                                    Refuser (supprimer)
+                                </button>
+                                <a class="btn btn-secondary"
+                                   href="{{ ea_url().setAction('index').setController(ea.crud.controllerFqcn) }}">
+                                    Retour à la liste
+                                </a>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

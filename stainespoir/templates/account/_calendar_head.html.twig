@@ -1,0 +1,21 @@
+<div class="cal-head">
+    {% if cal.prev %}
+        <a class="btn cal-prev"
+           href="{{ path('app_account', { enfant: current.id, tab: 'presences', annee: schoolYear, mois: cal.prev }) }}"
+           data-month="{{ cal.prev }}"
+           aria-label="Mois précédent">←</a>
+    {% else %}
+        <span class="btn cal-prev" aria-disabled="true">←</span>
+    {% endif %}
+
+    <div class="cal-title">{{ cal.label|capitalize }}</div>
+
+    {% if cal.next %}
+        <a class="btn cal-next"
+           href="{{ path('app_account', { enfant: current.id, tab: 'presences', annee: schoolYear, mois: cal.next }) }}"
+           data-month="{{ cal.next }}"
+           aria-label="Mois suivant">→</a>
+    {% else %}
+        <span class="btn cal-next" aria-disabled="true">→</span>
+    {% endif %}
+</div>

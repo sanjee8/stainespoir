@@ -26,7 +26,7 @@ final class AccountApiController extends AbstractController
         return $kid;
     }
 
-    /** Toutes les présences d’une année scolaire (1 sept N → 31 août N+1) */
+
     #[Route('/presences-annee', name: 'presences_year', methods: ['GET'])]
     public function presencesYear(
         Request $req,

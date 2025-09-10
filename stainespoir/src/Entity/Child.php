@@ -14,6 +14,12 @@ class Child
     #[ORM\ManyToOne] #[ORM\JoinColumn(nullable:false, onDelete:'CASCADE')]
     private ?ParentProfile $parent = null;
 
+    #[ORM\Column(type: 'boolean')]
+    private bool $isApproved = false;
+
+    public function isApproved(): bool { return $this->isApproved; }
+    public function setIsApproved(bool $v): self { $this->isApproved = $v; return $this; }
+
     #[ORM\Column(length:100)] private string $firstName = '';
     #[ORM\Column(length:100)] private string $lastName  = '';
     #[ORM\Column(type:'date', nullable:true)] private ?\DateTimeInterface $dateOfBirth = null;

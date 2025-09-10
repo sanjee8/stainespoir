@@ -1,0 +1,256 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content %}
+    {# Flashs #}
+    {% for label, msgs in app.flashes %}
+        {% for m in msgs %}<div class="alert alert-{{ label }}">{{ m }}</div>{% endfor %}
+    {% endfor %}
+
+    {% set prof = profile %}
+
+    <style>
+        /* ---- Tabs messages ---- */
+        .msg-tabs{ display:block }
+        .msg-tabs-nav{ display:flex; gap:.5rem; flex-wrap:wrap; border-bottom:1px solid #e5e7eb; margin-bottom:.75rem }
+        .msg-tabs-nav .tab-btn{
+            border:1px solid #e5e7eb; background:#f8fafc; padding:.4rem .6rem; border-radius:.5rem .5rem 0 0;
+            font-size:.9rem; cursor:pointer;
+        }
+        .msg-tabs-nav .tab-btn.active{
+            background:#fff; border-bottom-color:#fff; box-shadow:0 -1px 0 #fff inset, 0 2px 8px rgba(0,0,0,.06);
+        }
+        .msg-tabs-panels .tab-panel{ display:none }
+        .msg-tabs-panels .tab-panel.active{ display:block }
+
+        .msg-box{ max-height:260px; overflow:auto; border:1px solid #e5e7eb; border-radius:.5rem; padding:.5rem }
+        .msg-item{ margin-bottom:.6rem }
+        .msg-meta{ font-size:.8rem; color:#6b7280 }
+        .msg-form{ display:flex; gap:.5rem; align-items:flex-start }
+        .msg-form textarea{ min-height:46px; }
+        .msg-empty{ color:#6b7280; margin:0 }
+    </style>
+
+    <h1 style="margin-bottom:8px">Dossier — Parent validé</h1>
+    <p class="text-muted">Consultation du parent, des enfants, des sorties signées et messagerie par enfant.</p>
+
+    <div class="row">
+        <div class="col-12 col-lg-5">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Informations du parent</h5>
+                    <dl class="row mb-3">
+                        <dt class="col-5">Nom</dt><dd class="col-7">{{ prof ? prof.lastName : '—' }}</dd>
+                        <dt class="col-5">Prénom</dt><dd class="col-7">{{ prof ? prof.firstName : '—' }}</dd>
+                        <dt class="col-5">Email</dt><dd class="col-7">{{ parent.email }}</dd>
+                        <dt class="col-5">Téléphone</dt><dd class="col-7">{{ prof and prof.phone ? prof.phone : '—' }}</dd>
+                        <dt class="col-5">Adresse</dt><dd class="col-7">{{ prof and prof.address ? prof.address : '—' }}</dd>
+                        <dt class="col-5">Code postal</dt><dd class="col-7">{{ prof and prof.postalCode ? prof.postalCode : '—' }}</dd>
+                        <dt class="col-5">Ville</dt><dd class="col-7">{{ prof and prof.city ? prof.city : '—' }}</dd>
+                    </dl>
+
+                    <a class="btn btn-primary"
+                       href="{{ ea_url()
+                           .setController('App\\Controller\\Admin\\ParentValidatedCrudController')
+                           .setAction('edit')
+                           .setEntityId(parent.id) }}">
+                        Modifier le parent
+                    </a>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Enfants rattachés</h5>
+                        <a class="btn btn-secondary"
+                           href="{{ ea_url()
+                               .setController('App\\Controller\\Admin\\ChildCrudController')
+                               .setAction('new')
+                               .set('parentId', parent.id) }}">
+                            Ajouter un enfant
+                        </a>
+                    </div>
+
+                    {% if children is empty %}
+                        <p class="text-muted mt-3 mb-0">Aucun enfant rattaché.</p>
+                    {% else %}
+                        <div class="table-responsive mt-3">
+                            <table class="table align-middle">
+                                <thead>
+                                <tr>
+                                    <th>Nom prénom</th>
+                                    <th>Niveau</th>
+                                    <th>Établissement</th>
+                                    <th>Validé</th>
+                                    <th style="width:1%"></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for c in children %}
+                                    {% set approved = (c.isApproved is defined ? c.isApproved : (c.getIsApproved is defined ? c.getIsApproved() : (c.isApproved() is defined ? c.isApproved() : false))) %}
+                                    <tr>
+                                        <td><strong>{{ c.firstName ?? c.getFirstName() }} {{ c.lastName ?? c.getLastName() }}</strong></td>
+                                        <td>{{ (c.level ?? (c.getLevel is defined ? c.getLevel() : null)) ?: '—' }}</td>
+                                        <td>{{ (c.school ?? (c.getSchool is defined ? c.getSchool() : null)) ?: '—' }}</td>
+                                        <td><span class="badge {{ approved ? 'bg-success' : 'bg-secondary' }}">{{ approved ? 'Oui' : 'Non' }}</span></td>
+                                        <td class="text-nowrap">
+                                            <a class="btn btn-sm btn-primary"
+                                               href="{{ ea_url()
+                                                   .setController('App\\Controller\\Admin\\ChildCrudController')
+                                                   .setAction('edit')
+                                                   .setEntityId(c.id ?? c.getId()) }}">
+                                                Éditer
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+
+            {# -------- Sorties signées -------- #}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Sorties signées (foyer)</h5>
+                    {% if signedOutings is empty %}
+                        <p class="text-muted mb-0">Aucune sortie signée.</p>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                <tr>
+                                    <th>Enfant</th>
+                                    <th>Sortie</th>
+                                    <th>Quand</th>
+                                    <th>Lieu</th>
+                                    <th>Statut</th>
+                                    <th>Signée le</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for r in signedOutings %}
+                                    <tr>
+                                        <td>{{ r.childName }}</td>
+                                        <td>
+                                            <div><strong>{{ r.title }}</strong></div>
+                                            {% if r.description %}<div class="text-muted small">{{ r.description|striptags|slice(0,120) ~ (r.description|length > 120 ? '…' : '') }}</div>{% endif %}
+                                        </td>
+                                        <td>{{ r.startsAt }}</td>
+                                        <td>{{ r.location ?: '—' }}</td>
+                                        <td>
+                                            {% set st = r.status ?: '' %}
+                                            {% set label = {
+                                                'confirmed':'Signée',
+                                                'attended':'Présent',
+                                                'absent':'Absent',
+                                                'declined':'Refusée',
+                                                'cancelled':'Annulée'
+                                            }[st]|default(st ?: '—') %}
+                                            <span class="badge {{ st in ['confirmed','attended'] ? 'bg-success' : (st in ['absent','declined'] ? 'bg-danger' : 'bg-secondary') }}">
+                          {{ label }}
+                        </span>
+                                        </td>
+                                        <td>{{ r.signedAt ?: '—' }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# -------- Chats / Messages (onglets par enfant) -------- #}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Messages</h5>
+
+                    {% if children is empty %}
+                        <p class="text-muted mb-0">Aucun enfant → pas de conversation.</p>
+                    {% else %}
+                        <div class="msg-tabs" id="msgTabs">
+                            <div class="msg-tabs-nav" role="tablist" aria-label="Conversations par enfant">
+                                {% for c in children %}
+                                    {% set cid = c.id ?? c.getId() %}
+                                    {% set cname = (c.firstName ?? c.getFirstName()) ~ ' ' ~ (c.lastName ?? c.getLastName()) %}
+                                    <button type="button" class="tab-btn" role="tab" aria-controls="tab-{{ cid }}" data-tab="{{ cid }}">
+                                        {{ cname }}
+                                    </button>
+                                {% endfor %}
+                            </div>
+
+                            <div class="msg-tabs-panels">
+                                {% for c in children %}
+                                    {% set cid = c.id ?? c.getId() %}
+                                    {% set cname = (c.firstName ?? c.getFirstName()) ~ ' ' ~ (c.lastName ?? c.getLastName()) %}
+                                    {% set group = messagesByChild[cid]|default({'childName': cname, 'items': []}) %}
+
+                                    <div class="tab-panel" id="tab-{{ cid }}" role="tabpanel" aria-labelledby="btn-{{ cid }}">
+                                        <div id="list-{{ cid }}" class="msg-box">
+                                            {% if group.items is empty %}
+                                                <p class="msg-empty">Aucun message pour cet enfant.</p>
+                                            {% else %}
+                                                {% for m in group.items|slice(0,60)|reverse %}
+                                                    <div class="msg-item">
+                                                        <div class="msg-meta">
+                                                            {{ m.created }} — {{ m.from == 'parent' ? 'Parent' : 'Équipe' }}{% if not m.read %} · <span class="badge bg-warning text-dark">Non lu</span>{% endif %}
+                                                        </div>
+                                                        <div>{{ m.body }}</div>
+                                                    </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+
+                                        <form class="msg-form mt-2" method="post" action="{{ path('admin_parent_send_message', { parentId: parent.id }) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_send_message_' ~ cid) }}">
+                                            <input type="hidden" name="child_id" value="{{ cid }}">
+                                            <textarea name="text" class="form-control" placeholder="Votre message..." required></textarea>
+                                            <button class="btn btn-primary" type="submit">Envoyer</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            const container = document.getElementById('msgTabs');
+            if(!container) return;
+
+            const btns   = container.querySelectorAll('.tab-btn');
+            const panels = container.querySelectorAll('.tab-panel');
+
+            function activate(id){
+                btns.forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+                panels.forEach(p => p.classList.toggle('active', p.id === 'tab-'+id));
+                // scroll en bas du panneau actif
+                const box = container.querySelector('#list-'+id);
+                if (box) box.scrollTop = box.scrollHeight;
+                // ancre dans l'URL (pour recharger sur le bon onglet)
+                try { history.replaceState({}, '', '#chat-'+id); } catch(e){}
+            }
+
+            // choix initial : hash #chat-{id} ou premier enfant
+            let initial = (location.hash && location.hash.startsWith('#chat-')) ? location.hash.replace('#chat-','') : null;
+            if (!initial && btns.length) initial = btns[0].dataset.tab;
+            if (initial) activate(initial);
+
+            // clicks
+            btns.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
+
+            // si pas d'initial (aucun enfant), rien à faire
+        })();
+    </script>
+{% endblock %}

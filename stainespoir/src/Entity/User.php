@@ -29,10 +29,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(options: ['default' => 'CURRENT_TIMESTAMP'])]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(type: 'boolean')]
+    private bool $isApproved = false;
+
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $approvedAt = null;
+
+    public function isApproved(): bool { return $this->isApproved; }
+    public function setIsApproved(bool $v): self { $this->isApproved = $v; return $this; }
+
+    public function getApprovedAt(): ?\DateTimeInterface { return $this->approvedAt; }
+    public function setApprovedAt(?\DateTimeInterface $d): self { $this->approvedAt = $d; return $this; }
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->roles = ['ROLE_PARENT'];
+    }
+
+    public function getFullName(): string
+    {
+        $p = method_exists($this, 'getProfile') ? $this->getProfile() : null;
+        $first = $p?->getFirstName() ?? '';
+        $last  = $p?->getLastName() ?? '';
+        return trim($first.' '.$last);
     }
 
     public function getId(): ?int { return $this->id; }

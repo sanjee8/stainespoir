@@ -1,0 +1,23 @@
+
+{% set dayNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+{% for name in dayNames %}
+    <div class="cal-dayname">{{ name }}</div>
+{% endfor %}
+
+{% if cal.startPad > 0 %}
+    {% for _ in 1..cal.startPad %}
+        <div class="cal-cell empty"></div>
+    {% endfor %}
+{% endif %}
+
+{% for d in cal.days %}
+    <div class="cal-cell {{ d.isSaturday ? 'sat' }}">
+        <div class="cal-num">{{ d.d }}</div>
+        {% if d.isSaturday %}
+            {% set st = d.status %}
+            {% set label = st == 'present' ? 'Présent' : (st == 'absent' ? 'Absent' : (st in ['late','excused'] ? 'À confirmer' : '—')) %}
+            {% set cls   = st == 'present' ? 'yes'     : (st == 'absent' ? 'no'     : (st in ['late','excused'] ? 'maybe'       : 'none')) %}
+            <div class="cal-status {{ cls }}">{{ label }}</div>
+        {% endif %}
+    </div>
+{% endfor %}

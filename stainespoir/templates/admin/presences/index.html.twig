@@ -1,0 +1,210 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content %}
+    {# Flashs #}
+    {% for label, msgs in app.flashes %}
+        {% for m in msgs %}<div class="alert alert-{{ label }}">{{ m }}</div>{% endfor %}
+    {% endfor %}
+
+    <style>
+        /* ====== Mobile-first styles ====== */
+        .p-toolbar{
+            position: sticky; top: 0; z-index: 5;
+            background: #fff; padding: .75rem; margin: -1rem -1rem .5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .p-row{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center }
+        .p-row .grow{ flex:1 1 auto }
+        .p-kpis{ display:flex; gap:.5rem; flex-wrap:wrap }
+        .badge-chip{
+            display:inline-flex; align-items:center; gap:.35rem;
+            padding:.35rem .55rem; border-radius:999px; font-size:.9rem; border:1px solid #e5e7eb; background:#f8fafc;
+        }
+        .dot{ width:10px; height:10px; border-radius:50% }
+        .dot.y{ background:#16a34a } .dot.n{ background:#dc2626 } .dot.u{ background:#9ca3af }
+
+        .p-actions{ display:flex; gap:.5rem; flex-wrap:wrap }
+        .btn-xs{ padding:.35rem .6rem; font-size:.9rem }
+
+        .p-search{ display:flex; gap:.5rem; margin-top:.5rem }
+        .p-search input[type="search"]{ flex:1 1 auto }
+
+        /* Liste enfants */
+        .kid-list{ display:grid; gap:.5rem; margin-top:.75rem }
+        .kid{ display:flex; align-items:center; gap:.75rem; padding:.65rem .75rem; border:1px solid #e5e7eb; border-radius:.75rem; background:#fff }
+        .kid .who{ min-width: 0 }
+        .who b{ display:block; font-size:1rem }
+        .who .muted{ color:#6b7280; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+        .seg{ display:inline-flex; border:1px solid #e5e7eb; border-radius:.6rem; overflow:hidden }
+        .seg input{ position:absolute; opacity:0; pointer-events:none }
+        .seg label{
+            padding:.45rem .6rem; min-width:72px; text-align:center; cursor:pointer; user-select:none;
+            background:#f8fafc; border-right:1px solid #e5e7eb; font-weight:500;
+        }
+        .seg label:last-child{ border-right:none }
+        .seg label[data-v="present"]{ color:#166534 }      /* green-800 */
+        .seg label[data-v="absent"]{ color:#991b1b }       /* red-800 */
+        .seg label[data-v="unset"]{ color:#374151 }        /* gray-700 */
+        .seg input:checked + label{ background:#fff; box-shadow: inset 0 0 0 2px rgba(0,0,0,.04) }
+
+        /* Desktop améliorations */
+        @media (min-width: 880px){
+            .kid{ padding: .65rem 1rem }
+            .seg label{ min-width:86px }
+        }
+
+        /* Barre d’enregistrement sticky */
+        .savebar{
+            position: sticky; bottom: 0; z-index: 5; margin: .75rem -1rem -1rem;
+            padding: .75rem 1rem; background: linear-gradient(180deg, rgba(255,255,255,.6), #fff 35%);
+            border-top: 1px solid #e5e7eb; display:flex; gap:.5rem; justify-content:flex-end;
+        }
+
+        /* Accessibilité focus visible */
+        .seg label:focus-visible, .btn:focus-visible, input[type="search"]:focus-visible, input[type="date"]:focus-visible{
+            outline: 2px solid #6A1B9A; outline-offset: 2px;
+        }
+    </style>
+
+    <h1 class="mb-2">Présences — fiche du {{ date|date('d/m/Y') }}</h1>
+
+    {# ========== Barre de contrôle (mobile-first) ========== #}
+    <div class="p-toolbar">
+        <form class="p-row" method="get" action="{{ path('admin_presences') }}">
+            <div class="grow">
+                <label class="form-label mb-1"><b>Date</b></label>
+                <input type="date" name="date" value="{{ date|date('Y-m-d') }}" class="form-control" onchange="this.form.submit()">
+            </div>
+
+            <div class="p-kpis">
+                <span class="badge-chip"><span class="dot y"></span><span>Présents:</span><b id="kpiY">0</b></span>
+                <span class="badge-chip"><span class="dot n"></span><span>Absents:</span><b id="kpiN">0</b></span>
+                <span class="badge-chip"><span class="dot u"></span><span>— :</span><b id="kpiU">0</b></span>
+            </div>
+
+            <div class="p-actions">
+                <button class="btn btn-outline-success btn-xs" type="button" id="btnAllPresent">Tout présent</button>
+                <button class="btn btn-outline-danger btn-xs"  type="button" id="btnAllAbsent">Tout absent</button>
+                <button class="btn btn-outline-secondary btn-xs" type="button" id="btnAllUnset">Tout —</button>
+            </div>
+
+            <div class="p-search">
+                <input type="search" id="q" class="form-control" placeholder="Rechercher un enfant (nom, niveau)…" aria-label="Rechercher un enfant">
+                <label class="form-check" style="white-space:nowrap">
+                    <input type="checkbox" class="form-check-input" id="onlyUnset">
+                    <span class="form-check-label">Afficher uniquement —</span>
+                </label>
+            </div>
+        </form>
+    </div>
+
+    {# ========== Formulaire de soumission (POST) ========== #}
+    <form method="post" action="{{ path('admin_presences', { date: date|date('Y-m-d') }) }}">
+        <input type="hidden" name="do" value="save">
+        <input type="hidden" name="_token" value="{{ csrf_token(token_id) }}">
+
+        <div class="kid-list" id="kidList">
+            {% for c in children %}
+                {% set cid    = c.id ?? c.getId() %}
+                {% set fname  = c.firstName ?? (c.getFirstName is defined ? c.getFirstName() : '') %}
+                {% set lname  = c.lastName  ?? (c.getLastName  is defined ? c.getLastName()  : '') %}
+                {% set level  = c.level     ?? (c.getLevel     is defined ? c.getLevel()     : null) %}
+
+                {% set att = attMap[cid]|default(null) %}
+                {% set st  = att ? (att.status ?? (att.getStatus is defined ? att.getStatus() : null)) : null %}
+                {% set isP = st == 'present' %}
+                {% set isA = st == 'absent'  %}
+                {% set isU = st is null %}
+
+                <div class="kid" data-name="{{ (fname ~ ' ' ~ lname)|lower }}" data-level="{{ (level|default(''))|lower }}" data-state="{{ isP ? 'present' : (isA ? 'absent' : 'unset') }}">
+                    <div class="who">
+                        <b>{{ fname }} {{ lname }}</b>
+                        <span class="muted">{{ level ?: '—' }}</span>
+                    </div>
+
+                    <div class="seg" role="tablist" aria-label="Présence de {{ fname }} {{ lname }}">
+                        <input id="p-{{ cid }}" type="radio" name="st[{{ cid }}]" value="present" {{ isP ? 'checked' }}>
+                        <label for="p-{{ cid }}" data-v="present" role="tab" aria-selected="{{ isP ? 'true' : 'false' }}">Présent</label>
+
+                        <input id="a-{{ cid }}" type="radio" name="st[{{ cid }}]" value="absent"  {{ isA ? 'checked' }}>
+                        <label for="a-{{ cid }}" data-v="absent" role="tab" aria-selected="{{ isA ? 'true' : 'false' }}">Absent</label>
+
+                        <input id="u-{{ cid }}" type="radio" name="st[{{ cid }}]" value="unset"   {{ isU ? 'checked' }}>
+                        <label for="u-{{ cid }}" data-v="unset"  role="tab" aria-selected="{{ isU ? 'true' : 'false' }}">—</label>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-secondary mb-0">Aucun enfant validé.</div>
+            {% endfor %}
+        </div>
+
+        <div class="savebar">
+            <button class="btn btn-primary btn-lg" type="submit">
+                Enregistrer
+            </button>
+        </div>
+    </form>
+
+    <script>
+        (function(){
+            const list = document.getElementById('kidList');
+            if (!list) return;
+
+            const q = document.getElementById('q');
+            const onlyUnset = document.getElementById('onlyUnset');
+            const kpiY = document.getElementById('kpiY');
+            const kpiN = document.getElementById('kpiN');
+            const kpiU = document.getElementById('kpiU');
+
+            function updateKPIs(){
+                let y=0,n=0,u=0;
+                list.querySelectorAll('.kid').forEach(k=>{
+                    const hidden = k.style.display === 'none';
+                    if (hidden) return; // KPIs sur la vue filtrée ? -> ici on compte TOUTES les lignes visibles
+                    const state = k.dataset.state || 'unset';
+                    if (state==='present') y++; else if (state==='absent') n++; else u++;
+                });
+                kpiY.textContent=y; kpiN.textContent=n; kpiU.textContent=u;
+            }
+
+            function applyFilters(){
+                const term = (q.value || '').trim().toLowerCase();
+                const onlyU = !!onlyUnset.checked;
+                const rows = list.querySelectorAll('.kid');
+                rows.forEach(k=>{
+                    const matchText = (k.dataset.name + ' ' + k.dataset.level).includes(term);
+                    const isU = k.dataset.state === 'unset';
+                    const show = matchText && (!onlyU || isU);
+                    k.style.display = show ? '' : 'none';
+                });
+                updateKPIs();
+            }
+
+            // Quand on clique sélection Présent/Absent/— : mettre data-state à jour
+            list.addEventListener('change', (e)=>{
+                const input = e.target;
+                if (input && input.name && input.name.startsWith('st[')) {
+                    const kid = input.closest('.kid');
+                    if (!kid) return;
+                    kid.dataset.state = input.value || 'unset';
+                    applyFilters(); // met aussi à jour KPIs
+                }
+            });
+
+            // Boutons "Tout ..."
+            function setAll(val){
+                list.querySelectorAll('input[type=radio][value="'+val+'"]').forEach(r => { r.checked = true; r.dispatchEvent(new Event('change', {bubbles:true})); });
+            }
+            document.getElementById('btnAllPresent')?.addEventListener('click', ()=> setAll('present'));
+            document.getElementById('btnAllAbsent') ?.addEventListener('click', ()=> setAll('absent'));
+            document.getElementById('btnAllUnset')  ?.addEventListener('click', ()=> setAll('unset'));
+
+            // Recherche + filtre
+            q?.addEventListener('input', applyFilters);
+            onlyUnset?.addEventListener('change', applyFilters);
+
+            // Init
+            applyFilters();
+        })();
+    </script>
+{% endblock %}

@@ -17,6 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 #[IsGranted('ROLE_PARENT')]
 final class AccountController extends AbstractController
@@ -88,7 +89,7 @@ final class AccountController extends AbstractController
 
         $totalPA = $pas['total'];
         $data['presencePct30'] = $totalPA ? (int) round($pas['present'] * 100 / $totalPA) : 0;
-// 👇 garantis la complémentarité après arrondi
+
         $data['absencePct30']  = $totalPA ? (100 - $data['presencePct30']) : 0;
 
 
@@ -348,45 +349,61 @@ final class AccountController extends AbstractController
      *  - prev ("YYYY-MM") ou null si avant début d'année scolaire
      *  - next ("YYYY-MM") ou null si après fin d'année scolaire
      */
-    private function buildMonthView(\DateTimeImmutable $monthStart, array $attendances, \DateTimeImmutable $syStart, \DateTimeImmutable $syEnd): array
-    {
-        // map ISO -> status
+    private function buildMonthView(
+        \DateTimeImmutable $monthStart,
+        array $attendances,
+        \DateTimeImmutable $syStart,
+        \DateTimeImmutable $syEnd
+    ): array {
+        $tz = new \DateTimeZone('Europe/Paris');
+
+        // Normalise au 1er du mois 00:00
+        $monthStart = $monthStart->setTimezone($tz)->modify('first day of this month')->setTime(0, 0, 0);
+        $y = (int) $monthStart->format('Y');
+        $m = (int) $monthStart->format('m');
+        $dim = (int) $monthStart->format('t');
+
+        // Map YYYY-MM-DD -> status (present|absent|late|excused)
         $map = [];
         foreach ($attendances as $a) {
-            $map[$a->getDate()->format('Y-m-d')] = $a->getStatus(); // present|absent|late|excused
+            $map[$a->getDate()->setTimezone($tz)->format('Y-m-d')] = $a->getStatus();
         }
 
-        $y = (int)$monthStart->format('Y');
-        $m = (int)$monthStart->format('m');
-        $dim = (int)$monthStart->format('t');
-
+        // Jours du mois
         $days = [];
         for ($d = 1; $d <= $dim; $d++) {
-            $date = \DateTimeImmutable::createFromFormat('Y-m-d', sprintf('%04d-%02d-%02d', $y, $m, $d), new \DateTimeZone('Europe/Paris'));
-            $dow  = (int)$date->format('N'); // 1=lundi .. 7=dimanche
+            $date = \DateTimeImmutable::createFromFormat('Y-m-d', sprintf('%04d-%02d-%02d', $y, $m, $d), $tz);
+            $dow  = (int) $date->format('N'); // 1=lundi .. 7=dimanche
             $isSaturday = ($dow === 6);
             $iso = $date->format('Y-m-d');
+
+            // Samedi : status en base ou 'none' si rien; autres jours : 'off'
             $status = $isSaturday ? ($map[$iso] ?? 'none') : 'off';
+
             $days[] = [
-                'd' => $d,
+                'd'          => $d,
                 'isSaturday' => $isSaturday,
-                'status' => $status,
+                'status'     => $status,
             ];
         }
 
-        // padding départ (lundi=1)
-        $firstDow = (int)$monthStart->format('N');
+        // Padding avant le 1er du mois (header L M M J V S D)
+        // 1=lundi => 0, 2=mardi => 1, ..., 7=dimanche => 6
+        $firstDow = (int) $monthStart->format('N'); // 1=lundi..7=dimanche
         $startPad = $firstDow - 1;
 
-        // prev/next clampés à l’année scolaire
+        // Navigation mois précédent/suivant, bornée à l’année scolaire
         $prevStart = $monthStart->modify('first day of previous month');
         $nextStart = $monthStart->modify('first day of next month');
 
         $prevKey = ($prevStart >= $syStart) ? $prevStart->format('Y-m') : null;
-        $nextKey = ($nextStart <= $syEnd->modify('first day of this month')) ? $nextStart->format('Y-m') : null;
+
+        // On compare au 1er jour du mois de la borne supérieure
+        $syEndMonthStart = $syEnd->modify('first day of this month')->setTime(0,0,0);
+        $nextKey = ($nextStart <= $syEndMonthStart) ? $nextStart->format('Y-m') : null;
 
         return [
-            'label'    => self::frMonthYear($monthStart),
+            'label'    => self::frMonthYear($monthStart), // ex: "septembre 2025"
             'monthKey' => $monthStart->format('Y-m'),
             'startPad' => $startPad,
             'days'     => $days,
@@ -410,6 +427,62 @@ final class AccountController extends AbstractController
 
         return $this->render('account/outing_print.html.twig', [
             'reg' => $reg,
+        ]);
+    }
+
+
+
+    #[Route('/mon-compte/presences/month', name: 'app_account_presences_month', methods: ['GET'])]
+    public function presencesMonth(
+        Request $req,
+        ChildRepository $children,
+        AttendanceRepository $attendances
+    ): JsonResponse {
+        /** @var \App\Entity\User $user */
+        $user = $this->getUser();
+        $profile = method_exists($user, 'getProfile') ? $user->getProfile() : null;
+
+        $cid = $req->query->getInt('enfant', 0);
+        $child = $children->find($cid);
+        if (!$child || $child->getParent() !== $profile) {
+            return new JsonResponse(['error' => 'Enfant invalide'], 403);
+        }
+
+        $askedYear = $req->query->getInt('annee', $this->defaultSchoolStartYear());
+        [$syStart, $syEnd] = $this->schoolYearRange($askedYear);
+
+        $tz = new \DateTimeZone('Europe/Paris');
+        $mois = (string) $req->query->get('mois', '');
+        if ($mois && preg_match('/^\d{4}-\d{2}$/', $mois)) {
+            $monthStart = \DateTimeImmutable::createFromFormat('Y-m-d', $mois.'-01', $tz);
+        } else {
+            $today = new \DateTimeImmutable('today', $tz);
+            if ($today < $syStart) $today = $syStart;
+            if ($today > $syEnd)   $today = $syEnd;
+            $monthStart = $today->modify('first day of this month');
+        }
+
+        $monthEnd = $monthStart->modify('last day of this month')->setTime(23,59,59);
+        $list = $attendances->findForChild($cid, $monthStart, $monthEnd);
+        $cal  = $this->buildMonthView($monthStart, $list, $syStart, $syEnd);
+
+        // Partials : tête + grille (on respecte ton style)
+        $head = $this->renderView('account/_calendar_head.html.twig', [
+            'current'    => $child,
+            'schoolYear' => $askedYear,
+            'cal'        => $cal,
+        ]);
+        $grid = $this->renderView('account/_calendar_grid.html.twig', [
+            'cal' => $cal,
+        ]);
+
+        return new JsonResponse([
+            'label'    => $cal['label'],
+            'monthKey' => $cal['monthKey'],
+            'prev'     => $cal['prev'],
+            'next'     => $cal['next'],
+            'head'     => $head,
+            'grid'     => $grid,
         ]);
     }
 

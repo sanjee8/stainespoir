@@ -36,7 +36,10 @@ security:
                 path: app_logout
                 target: app_home
 
+            user_checker: App\Security\UserChecker
+
     access_control:
         - { path: ^/mon-compte, roles: ROLE_PARENT }
         - { path: ^/connexion, roles: PUBLIC_ACCESS }
         - { path: ^/inscription, roles: PUBLIC_ACCESS }
+        - { path: ^/admin, roles: ROLE_ADMIN }

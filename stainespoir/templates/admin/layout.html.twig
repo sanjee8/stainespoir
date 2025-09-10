@@ -1,0 +1,22 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin — Stains Espoir{% endblock %}
+
+{% block body %}
+    <main class="admin">
+        <section class="section">
+            <div class="container" style="display:flex; gap:18px">
+                <aside style="min-width:220px">
+                    <nav class="vnav">
+                        <a href="{{ path('admin') }}">Accueil</a>
+                        <a href="{{ path('admin_pending_list') }}">Parents en attente</a>
+                        {# Ajoute d'autres liens si besoin #}
+                    </nav>
+                </aside>
+                <div style="flex:1">
+                    {% block admin_content %}{% endblock %}
+                </div>
+            </div>
+        </section>
+    </main>
+{% endblock %}
