@@ -181,6 +181,7 @@ body{
 /* Logo images */
 .brand-logo{height:40px;width:auto;display:block}
 .brand-logo-small{height:28px;width:auto;display:block}
+.brand-logo-big{height:100px;width:auto;display:block}
 .brand img{display:block}
 
 
@@ -698,6 +699,79 @@ body.no-scroll{ overflow:auto; }
     .site-header .nav-toggle{ display:none !important; }
 }
 
+/* === Espace familles (dropdown) — additif, safe === */
+.primary-nav .has-dropdown { position: relative; }
+
+.primary-nav .dropdown-toggle{
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .6rem 0;
+    background: transparent; border: 0; appearance: none;
+    font: inherit; font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+}
+.primary-nav .dropdown-toggle:hover,
+.primary-nav .dropdown-toggle.active{ color: var(--text); }
+.primary-nav .dropdown-toggle:focus{ outline: none; }
+.primary-nav .dropdown-toggle:focus-visible{
+    outline: 2px solid var(--primary, #7B1FA2);
+    outline-offset: 2px;
+}
+
+/* petite rotation de la flèche si la classe .chev est présente */
+.primary-nav .dropdown-toggle .chev{ transition: transform .2s ease; }
+.primary-nav .has-dropdown:hover .dropdown-toggle .chev,
+.primary-nav .has-dropdown:focus-within .dropdown-toggle .chev{ transform: rotate(180deg); }
+
+/* Menu déroulant (desktop) */
+.primary-nav .dropdown-menu{
+    position: absolute;
+    top: calc(100%); right: 0;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid var(--line, rgba(0,0,0,.1));
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.1);
+    padding: 8px; margin: 0; list-style: none;
+    display: none;
+    z-index: 2000;
+}
+
+/* Ouverture au survol / focus */
+.primary-nav .has-dropdown:hover .dropdown-menu,
+.primary-nav .has-dropdown:focus-within .dropdown-menu{ display: block; }
+
+/* Items du menu */
+.primary-nav .dropdown-menu a,
+.primary-nav .dropdown-menu .linklike{
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: .6rem .75rem;
+    text-decoration: none;
+    color: inherit;
+    background: none; border: 0;
+    border-radius: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.primary-nav .dropdown-menu a:hover,
+.primary-nav .dropdown-menu .linklike:hover{
+    background: rgba(0,0,0,.05);
+}
+.primary-nav .dropdown-menu form{ margin: 0; }
+
+/* Mobile : le menu s’intègre dans la colonne du off-canvas */
+@media (max-width: 1279px){
+    .primary-nav .dropdown-menu{
+        position: static;
+        display: block;
+        box-shadow: none; border: 0; padding: 0; margin-top: .25rem;
+        min-width: 0; background: transparent;
+    }
+}
+
+
 
 /* === Section breakpoints: mobile up to 1279px ============================= */
 /* Nos domaines d’action (simple features) */
@@ -997,6 +1071,7 @@ h1.entry-title.main_title { display: none !important; }
 .se-page .se-mosaic{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .se-page .se-tile{
     background:#fff; border:1px solid #eee; border-radius:14px; overflow:hidden;
+    max-height: 230px;
     box-shadow:0 8px 20px rgba(18,16,31,.08);
 }
 .se-page .se-tile img{ display:block;width:100%; }
@@ -1374,4 +1449,124 @@ body.no-scroll{ overflow: hidden; }
 .muted{ color:#6b7280; }
 
 
+/* ====== BENEVOLE PAGE ====== */
+.vb * { box-sizing: border-box; }
+.vb-hero{
+    background: linear-gradient(135deg,#fbfbff 0%,#f3ecff 40%,#f7f0ff 100%);
+    border-bottom: 1px solid #eee;
+    padding: 48px 0;
+}
+.vb-hero-wrap{ display:grid; grid-template-columns: 1.2fr .8fr; gap: 28px; align-items:center; }
+@media (max-width: 1080px){ .vb-hero-wrap{ grid-template-columns:1fr; } }
 
+.vb-pill{
+    display:inline-block; padding:6px 12px; border-radius:999px;
+    background:#f4ecff; color:#5a2d82; font-weight:800; font-size:13px;
+}
+.vb h1{ margin:.4rem 0 .2rem; font-size:clamp(26px,3vw,38px); line-height:1.15; }
+.vb-lead{ color:#6b7280; font-size:18px; max-width:700px; }
+
+.vb-cta-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; }
+.vb-btn{
+    display:inline-flex; align-items:center; gap:8px; padding:12px 18px; border-radius:12px;
+    background:#6A1B9A; color:#fff; text-decoration:none; font-weight:900; border:0;
+    transition: filter .2s, transform .02s;
+}
+.vb-btn:hover{ filter:brightness(.95); }
+.vb-btn:active{ transform: translateY(1px); }
+.vb-btn--ghost{
+    background: linear-gradient(#fff,#fff) padding-box, linear-gradient(90deg,#6A1B9A,#9C27B0) border-box;
+    border: 2px solid transparent; color:#3b2354;
+}
+
+/* bulles décoratives (hero) */
+.vb-hero-right{ display:flex; justify-content:center; }
+.vb-bubbles{ display:grid; grid-template-columns: repeat(5, 60px); gap:12px; align-items:center; justify-content:center; }
+.vb-bubbles span{
+    width:60px; height:60px; border-radius:16px; display:grid; place-items:center; font-size:26px;
+    background:#fff; border:1px solid #eee; box-shadow:0 10px 24px rgba(18,16,31,.06);
+}
+@media (max-width:600px){ .vb-bubbles{ grid-template-columns: repeat(5, 48px); } .vb-bubbles span{ width:48px; height:48px; } }
+
+/* RAISONS */
+.vb-band{ padding: 32px 0; }
+.vb-reasons{ display:grid; gap:16px; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 980px){ .vb-reasons{ grid-template-columns:1fr; } }
+
+.vb-reason{ display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border-radius:16px; background:#fff; border:1px solid #eee; box-shadow:0 6px 16px rgba(18,16,31,.05); }
+.vb-ico{
+    width:42px; height:42px; border-radius:12px; display:grid; place-items:center;
+    background:#f4ecff; color:#5a2d82; font-size:20px; font-weight:800; flex:0 0 42px;
+}
+.vb-reason h3{ margin:4px 0 2px; font-size:18px; }
+.vb-reason p{ margin:0; color:#374151; }
+
+/* STEPS */
+.vb-steps{ background: linear-gradient(135deg,#f9fbff 0%,#eef6ff 35%,#f1f7ff 100%); padding: 40px 0; border-top:1px solid #eef; border-bottom:1px solid #eef; }
+.vb-steps-head{ text-align:center; margin-bottom:12px; }
+.vb-timeline{ list-style:none; margin:0; padding: 8px 0 0 0; display:grid; gap:16px; max-width:900px; margin-inline:auto; position:relative; }
+.vb-step{ display:grid; grid-template-columns: 56px 1fr; gap:12px; align-items:flex-start; position:relative; }
+.vb-step::before{
+    content:""; position:absolute; left:28px; top:44px; bottom:-10px; width:2px; background:linear-gradient(#d7c9f2,#cbe0ff);
+}
+.vb-step:last-child::before{ display:none; }
+.vb-step-num{
+    width:56px; height:56px; border-radius:50%; display:grid; place-items:center; font-weight:900; color:#fff;
+    background: linear-gradient(135deg,#6A1B9A,#9C27B0);
+    box-shadow: 0 8px 18px rgba(106,27,154,.3);
+}
+.vb-step-body h4{ margin:4px 0 2px; font-size:18px; }
+.vb-step-body p{ margin:0; color:#374151; }
+.vb-hint{ color:#6b7280; font-size:14px; margin-top:6px; }
+.vb-mini-cta{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.vb-chip{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:999px; font-weight:800; text-decoration:none;
+    background:#6A1B9A; color:#fff;
+}
+.vb-chip--ghost{ background:#fff; border:2px solid #cbb7f1; color:#3b2354; }
+
+/* CTA FINAL */
+.vb-cta-final{ padding: 40px 0; }
+.vb-cta-box{
+    background: radial-gradient(1200px 400px at 20% -20%, #f4ecff 0, transparent 60%),
+    radial-gradient(1200px 400px at 120% 140%, #eef6ff 0, transparent 60%),
+    linear-gradient(135deg,#6A1B9A,#9C27B0);
+    color:#fff; border-radius:20px; padding: 26px; text-align:center;
+    box-shadow: 0 18px 44px rgba(106,27,154,.35);
+}
+.vb-cta-box h2{ margin:0 0 8px; font-size: clamp(22px, 3.2vw, 30px); }
+.vb-cta-box .vb-btn{ background:#fff; color:#3b2354; }
+.vb-cta-box .vb-btn--ghost{
+    background:transparent; color:#fff; border-color:#fff;
+}
+
+/* Utilitaires */
+.no-scroll{ overflow:hidden; }
+.small{ font-size: 14px; }
+
+/* CTA final — lisibilité renforcée */
+.vb-cta-box{
+    position: relative;
+    color:#fff; /* on garde le texte blanc */
+}
+.vb-cta-box::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    /* voile sombre + léger flou pour atténuer le bruit du fond */
+    background: rgba(10, 15, 30, .55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+.vb-cta-box > *{ position: relative; }
+
+/* boutons : bon contraste sur voile sombre */
+.vb-cta-box .vb-btn{ background:#fff; color:#111827; }
+.vb-cta-box .vb-btn--ghost{ background:transparent; color:#fff; border-color:#fff; }
+
+/* micro-ajustements confort */
+.vb-cta-box h2{ text-wrap: balance; }
+.vb-cta-final .vb-cta-row{
+    justify-content: center;
+}

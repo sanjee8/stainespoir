@@ -17,6 +17,39 @@ class Child
     #[ORM\Column(type: 'boolean')]
     private bool $isApproved = false;
 
+    #[ORM\Column(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $dob = null;
+
+    public function getDob(): ?\DateTimeImmutable
+    {
+        return $this->dob;
+    }
+
+    public function setDob(?\DateTimeImmutable $dob): self
+    {
+        $this->dob = $dob;
+        return $this;
+    }
+
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $canLeaveAlone = false;
+
+    public function isCanLeaveAlone(): bool
+    {
+        return $this->canLeaveAlone;
+    }
+
+    public function getCanLeaveAlone(): bool
+    {
+        return $this->canLeaveAlone;
+    }
+
+    public function setCanLeaveAlone(bool $canLeaveAlone): self
+    {
+        $this->canLeaveAlone = $canLeaveAlone;
+        return $this;
+    }
+
     public function isApproved(): bool { return $this->isApproved; }
     public function setIsApproved(bool $v): self { $this->isApproved = $v; return $this; }
 

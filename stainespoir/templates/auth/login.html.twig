@@ -44,7 +44,13 @@
 
         <section class="section">
             <div class="container">
-                <form id="loginForm" class="card narrow" method="post" action="{{ path('app_login') }}">
+                <form id="loginForm"
+                      class="card narrow"
+                      method="post"
+                      action="{{ path('app_login') }}"
+                      autocomplete="on"
+                      data-turbo="false"> {# désactive Turbo sur ce form pour éviter des surprises de cache #}
+
                     {% if error %}
                         <p class="form-msg error">{{ error.messageKey|trans(error.messageData, 'security') }}</p>
                     {% endif %}
@@ -52,13 +58,24 @@
                     <div class="fstack">
                         <label class="fgroup floating">
                             {# IMPORTANT: name="email" — mappé dans security.yaml username_parameter #}
-                            <input type="email" id="lg_email" name="email" autocomplete="email" required placeholder=" " value="{{ last_username }}">
+                            <input type="email"
+                                   id="lg_email"
+                                   name="email"
+                                   autocomplete="username"
+                                   required
+                                   placeholder=" "
+                                   value="{{ last_username }}">
                             <span>Email</span>
                         </label>
 
                         <label class="fgroup floating password">
                             {# IMPORTANT: name="password" — mappé dans security.yaml password_parameter #}
-                            <input type="password" id="lg_password" name="password" autocomplete="current-password" required placeholder=" ">
+                            <input type="password"
+                                   id="lg_password"
+                                   name="password"
+                                   autocomplete="current-password"
+                                   required
+                                   placeholder=" ">
                             <span>Mot de passe</span>
                             <button class="showpass" type="button" aria-label="Afficher/masquer le mot de passe">👁️</button>
                         </label>
@@ -73,7 +90,7 @@
 
                     <div class="actions">
                         <button class="btn" type="submit">Connexion</button>
-                        <a class="btn ghost" href="{{ path('app_register') }}">Créer un compte</a>
+                        <a class="btn ghost" href="{{ path('app_register') }}" data-turbo="false">Créer un compte</a>
                     </div>
 
                     <p class="muted" style="margin-top:8px;">
@@ -88,14 +105,37 @@
 {% block javascripts %}
     {{ parent() }}
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.showpass').forEach(btn=>{
-                btn.addEventListener('click', ()=>{
-                    const inp = btn.parentElement.querySelector('input');
-                    if(!inp) return;
-                    inp.type = inp.type === 'password' ? 'text' : 'password';
-                });
+        // Initialisation idempotente (Turbo/UX + bfcache)
+        function initLogin() {
+            const form = document.getElementById('loginForm');
+            if (!form) return;
+            if (form.dataset.inited === '1') return;
+            form.dataset.inited = '1';
+
+            // Bouton œil
+            document.querySelectorAll('.showpass').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const input = btn.closest('.password')?.querySelector('input');
+                    if (!input) return;
+                    input.type = (input.type === 'password') ? 'text' : 'password';
+                }, { passive: true });
             });
-        });
+
+            // Focus auto sur l'email si vide
+            const email = document.getElementById('lg_email');
+            if (email && !email.value) { try{ email.focus(); }catch{} }
+
+            // Empêche doubles submit
+            form.addEventListener('submit', () => {
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn) { btn.disabled = true; setTimeout(()=>{ btn.disabled=false; }, 4000); }
+            }, { once: true });
+        }
+
+        document.addEventListener('turbo:load',   initLogin);
+        document.addEventListener('turbo:render', initLogin);
+        document.addEventListener('DOMContentLoaded', initLogin);
+        window.addEventListener('pageshow', (e) => { if (e.persisted) initLogin(); });
     </script>
 {% endblock %}

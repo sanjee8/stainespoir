@@ -62,13 +62,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Enfants rattachés</h5>
-                        <a class="btn btn-secondary"
-                           href="{{ ea_url()
-                               .setController('App\\Controller\\Admin\\ChildCrudController')
-                               .setAction('new')
-                               .set('parentId', parent.id) }}">
-                            Ajouter un enfant
-                        </a>
+                        <a class="btn btn-primary" href="{{ addChildUrl }}">Ajouter un enfant</a>
                     </div>
 
                     {% if children is empty %}
@@ -82,6 +76,7 @@
                                     <th>Niveau</th>
                                     <th>Établissement</th>
                                     <th>Validé</th>
+                                    <th>Sortie autorisé ?</th>
                                     <th style="width:1%"></th>
                                 </tr>
                                 </thead>
@@ -93,6 +88,13 @@
                                         <td>{{ (c.level ?? (c.getLevel is defined ? c.getLevel() : null)) ?: '—' }}</td>
                                         <td>{{ (c.school ?? (c.getSchool is defined ? c.getSchool() : null)) ?: '—' }}</td>
                                         <td><span class="badge {{ approved ? 'bg-success' : 'bg-secondary' }}">{{ approved ? 'Oui' : 'Non' }}</span></td>
+                                        <td>
+                                            {% if c.canLeaveAlone %}
+                                                <span class="badge bg-success ok">Retour seul autorisé</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary warn">Retour seul interdit</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="text-nowrap">
                                             <a class="btn btn-sm btn-primary"
                                                href="{{ ea_url()

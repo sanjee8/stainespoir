@@ -38,6 +38,16 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3.5a5.5 5.5 0 1 1 0 11.001 5.5 5.5 0 0 1 0-11Zm0 2a3.5 3.5 0 1 0 .001 7.001A3.5 3.5 0 0 0 12 9.5ZM18 6.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
                 <span class="small">Instagram</span>
             </a>
+            {% if is_granted('ROLE_ADMIN') %}
+
+                <a class="social" href="{{ path('admin') }}" aria-label="Espace admin">
+                    <!-- Icône admin (cadenas) -->
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
+                        <path d="M17 8h-1V6a4 4 0 10-8 0v2H7a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-8a2 2 0 00-2-2Zm-7-2a2 2 0 114 0v2h-4V6Zm2 6a2 2 0 100 4 2 2 0 000-4Z"/>
+                    </svg>
+                    <span class="small">Espace admin</span>
+                </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -61,7 +71,8 @@
         <nav id="siteNav" class="primary-nav" aria-label="Navigation principale">
             <ul>
                 {% for item in main_nav %}
-                    {% set isActive = (currentRoute == item.route) %}
+                    {# Actif si route exacte ou si pattern matches #}
+                    {% set isActive = (currentRoute == (item.route ?? null)) %}
                     {% if not isActive and item.active_when is defined %}
                         {% for pat in item.active_when %}
                             {% if currentRoute matches '/' ~ pat ~ '/' %}
@@ -70,16 +81,49 @@
                         {% endfor %}
                     {% endif %}
 
-                    <li>
-                        <a href="{{ path(item.route) }}"
-                           class="{{ isActive ? 'active' }}"
-                           {% if isActive %}aria-current="page"{% endif %}>
-                            {{ item.label }}
-                        </a>
+                    <li class="{{ (item.type ?? 'link') == 'dropdown' ? 'has-dropdown' }}">
+                        {% if (item.type ?? 'link') == 'dropdown' and item.children is defined and item.children|length %}
+                            <button class="dropdown-toggle {{ isActive ? 'active' }}" type="button" aria-haspopup="true" aria-expanded="false">
+                                <!-- Icône utilisateur -->
+                                <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18" style="margin-right:6px;">
+                                    <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5A1.5 1.5 0 0 0 4.5 21h15A1.5 1.5 0 0 0 21 19.5C21 16.5 17 14 12 14Z"/>
+                                </svg>
+                                <span>{{ item.label }}</span>
+                                <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" style="margin-left:6px;">
+                                    <path d="M7 10l5 5 5-5"/>
+                                </svg>
+                            </button>
+
+                            <ul class="dropdown-menu" role="menu">
+                                {% for child in item.children %}
+                                    {% if child.show_when is not defined
+                                        or (child.show_when == 'guest' and not app.user)
+                                        or (child.show_when == 'auth'  and app.user) %}
+                                        <li role="none">
+                                            {% if child.is_logout ?? false %}
+                                                <form role="menuitem" method="post" action="{{ path(child.route) }}">
+                                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                                                    <button type="submit" class="linklike">Se déconnecter</button>
+                                                </form>
+                                            {% else %}
+                                                <a role="menuitem" href="{{ path(child.route) }}">{{ child.label }}</a>
+                                            {% endif %}
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <a href="{{ item.route is defined ? path(item.route) : '#' }}"
+                               class="{{ isActive ? 'active' }}"
+                               {% if isActive %}aria-current="page"{% endif %}>
+                                {{ item.label }}
+                            </a>
+                        {% endif %}
                     </li>
                 {% endfor %}
             </ul>
         </nav>
+
 
         <div class="nav-backdrop" id="navBackdrop" hidden></div>
     </div>
@@ -92,9 +136,8 @@
 <footer class="site-footer creative-footer" aria-label="Pied de page">
     <div class="container footer-top">
         <div class="ft-brand">
-            <a href="/" class="brand brand-footer">
-                <img src="images/logo-FINAL-1.png" class="brand-logo-small" alt="Stains Espoir" />
-                <span class="brand-name">Stains&nbsp;Espoir</span>
+            <a href="{{ path('app_home') }}" class="brand brand-footer">
+                <img src="{{ asset('images/logo_final-300x194.png') }}" class="brand-logo-big" alt="Stains Espoir" />
             </a>
             <p class="small tagline">Votre réussite, c’est notre devoir.</p>
 
@@ -103,11 +146,9 @@
         <nav class="ft-nav" aria-label="Navigation pied de page">
             <h3 class="ft-title">Navigation</h3>
             <ul role="list">
-                <li><a href="/association">L’association</a></li>
-                <li><a href="/evenements">Événements</a></li>
-                <li><a href="/contact">Contact</a></li>
-                <li><a href="/adherer">Adhérer</a></li>
-                <li><a href="/benevole">Devenir bénévole</a></li>
+                <li><a href="{{ path('app_asso') }}">L’association</a></li>
+                <li><a href="{{ path('app_register') }}">Adhérer</a></li>
+                <li><a href="{{ path('app_benevole') }}">Devenir bénévole</a></li>
             </ul>
         </nav>
 
@@ -147,7 +188,7 @@
             <div class="ft-legal">
                 <a href="/mentions-legales">Mentions légales</a>
                 <span aria-hidden="true">·</span>
-                <a href="/contact">Contact</a>
+                <a href="{{ path('app_home') }}">Contact</a>
             </div>
         </div>
     </div></footer>
@@ -167,6 +208,34 @@
 </script>
 
 <script>
+
+    (function () {
+        function clearLoadingStates() {
+            document.querySelectorAll('.btn.is-loading, .btn[aria-busy="true"]').forEach(el => {
+                el.classList.remove('is-loading');
+                el.removeAttribute('aria-busy');
+                el.removeAttribute('disabled');
+            });
+        }
+
+        // Turbo (Symfony UX) ?
+        document.addEventListener('turbo:load', clearLoadingStates);
+        document.addEventListener('turbo:render', clearLoadingStates);
+
+        // Fallback si pas Turbo
+        window.addEventListener('pageshow', clearLoadingStates);
+
+        // Optionnel : au clic, mets l'état loading et laisse le navigateur naviguer
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest('a.btn, button.btn');
+            if (!a) return;
+            // Applique un "loading" visuel court
+            a.classList.add('is-loading');
+            a.setAttribute('aria-busy', 'true');
+            // Ne pas empêcher la navigation !
+        });
+    })();
+
     // JS minimal: menu mobile + année
     (function () {
         const navToggle = document.getElementById('navToggle');

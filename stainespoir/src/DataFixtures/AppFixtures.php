@@ -44,62 +44,6 @@ final class AppFixtures extends Fixture
         $em->persist($user);
         $em->persist($profile);
 
-        // ============================================================
-        // 2) ENFANTS RATTACHÉS AU PROFIL
-        // ============================================================
-        $kid1 = new Child();
-        $this->setChildFirstName($kid1, 'Yanis');
-        $this->setChildLastName($kid1, 'Ben Ali');
-        $this->setChildDob($kid1, new \DateTimeImmutable('2013-04-10'));
-        $this->setChildLevel($kid1, 'CM2');
-        $this->setChildSchool($kid1, 'Élémentaire J. Curie');
-        $this->linkChildToParent($kid1, $profile);
-
-        $kid2 = new Child();
-        $this->setChildFirstName($kid2, 'Inès');
-        $this->setChildLastName($kid2, 'Ben Ali');
-        $this->setChildDob($kid2, new \DateTimeImmutable('2010-11-22'));
-        $this->setChildLevel($kid2, '3e');
-        $this->setChildSchool($kid2, 'Collège Barbara');
-        $this->linkChildToParent($kid2, $profile);
-
-        $em->persist($kid1);
-        $em->persist($kid2);
-
-        // ============================================================
-        // 3) PRESENCES SUR LES 12 DERNIERS SAMEDIS
-        // ============================================================
-        $lastSaturdays = self::lastSaturdays(12); // DateTimeImmutable (minuit)
-        foreach ([$kid1, $kid2] as $child) {
-            foreach ($lastSaturdays as $day) {
-                $a = new Attendance();
-                $this->setAttendanceChild($a, $child);
-                $this->setAttendanceDate($a, $day);
-                $this->setAttendanceStatus($a, self::weightedPick([
-                    'present' => 70,
-                    'absent'  => 15,
-                    'late'    => 10,
-                    'excused' => 5,
-                ]));
-                $this->setAttendanceNotes($a, $faker->boolean(20) ? $faker->sentence(8) : null);
-                $em->persist($a);
-            }
-        }
-
-        // ============================================================
-        // 4) MESSAGES (4 staff + 2 parent) PAR ENFANT
-        // ============================================================
-        foreach ([$kid1, $kid2] as $child) {
-            for ($i = 0; $i < 6; $i++) {
-                $m = new Message();
-                $this->setMessageChild($m, $child);
-                $this->setMessageSubject($m, $i < 4 ? 'Info séance' : 'Question parent');
-                $this->setMessageBody($m, $i < 4 ? $faker->sentence(14) : $faker->sentence(10));
-                $this->setMessageSender($m, $i < 4 ? 'staff' : 'parent');
-                $this->maybeSetMessageCreatedAt($m, $now->sub(new \DateInterval('P'.(10-$i).'D')));
-                $em->persist($m);
-            }
-        }
 
         // ============================================================
         // 5) SORTIES (3 à venir + 2 passées) + INSCRIPTIONS ENFANTS
@@ -127,59 +71,6 @@ final class AppFixtures extends Fixture
             $outings[] = $o;
         }
 
-        foreach ([$kid1, $kid2] as $child) {
-            foreach ($outings as $o) {
-                $isFuture = $this->getOutingStartsAt($o) > $now;
-                $status = $isFuture
-                    ? self::weightedPick(['invited'=>40, 'confirmed'=>55, 'declined'=>5])
-                    : self::weightedPick(['attended'=>80, 'absent'=>20]);
-                $r = new OutingRegistration();
-                $this->setOutRegChild($r, $child);
-                $this->setOutRegOuting($r, $o);
-                $this->setOutRegStatus($r, $status);
-                $this->setOutRegNotes($r, $faker->boolean(15) ? $faker->sentence(8) : null);
-                $em->persist($r);
-            }
-        }
-
-        // ============================================================
-        // 6) SECOND PARENT (OPTIONNEL) + RGPD
-        // ============================================================
-        $user2 = new User();
-        $this->setUserEmail($user2, 'autre.parent@stains-espoir.fr');
-        $this->setUserRoles($user2, ['ROLE_PARENT']);
-        $this->setUserPassword($user2, $this->hasher->hashPassword($user2, 'Passw0rd!'));
-        $this->setUserRgpdConsentAt($user2, $now);
-
-        $profile2 = new ParentProfile();
-        $this->setProfileFirstName($profile2, 'Karim');
-        $this->setProfileLastName($profile2, 'Rahmani');
-        $this->setProfilePhone($profile2, '06 11 22 33 44');
-        $this->setProfileRgpdConsentAt($profile2, $now);
-        $this->setProfilePhotoConsent($profile2, true);
-        $this->setProfilePhotoConsentAt($profile2, $now);
-        $this->linkProfileToUser($profile2, $user2);
-
-        $kid3 = new Child();
-        $this->setChildFirstName($kid3, 'Anis');
-        $this->setChildLastName($kid3, 'Rahmani');
-        $this->setChildDob($kid3, new \DateTimeImmutable('2012-02-05'));
-        $this->setChildLevel($kid3, '5e');
-        $this->setChildSchool($kid3, 'Collège J. Jaurès');
-        $this->linkChildToParent($kid3, $profile2);
-
-        $em->persist($user2);
-        $em->persist($profile2);
-        $em->persist($kid3);
-
-        foreach (self::lastSaturdays(8) as $day) {
-            $a = new Attendance();
-            $this->setAttendanceChild($a, $kid3);
-            $this->setAttendanceDate($a, $day);
-            $this->setAttendanceStatus($a, self::weightedPick(['present'=>65, 'absent'=>20, 'late'=>10, 'excused'=>5]));
-            $em->persist($a);
-        }
-
         // ============================================================
         // FLUSH
         // ============================================================
@@ -188,7 +79,6 @@ final class AppFixtures extends Fixture
         if (\PHP_SAPI === 'cli') {
             echo PHP_EOL.'Comptes de démo:' . PHP_EOL;
             echo ' - parent.demo@stains-espoir.fr / Passw0rd!' . PHP_EOL;
-            echo ' - autre.parent@stains-espoir.fr / Passw0rd!' . PHP_EOL;
         }
     }
 

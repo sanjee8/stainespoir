@@ -25,7 +25,6 @@ final class RegistrationController extends AbstractController
     {
         return $this->render('auth/register.html.twig', [
             'csrf_token' => $csrf->getToken('register_form')->getValue(),
-            // tu peux aussi passer des listes (niveaux, etc.)
         ]);
     }
 
@@ -47,13 +46,13 @@ final class RegistrationController extends AbstractController
         }
 
         // ---- Validation basique
-        $email = trim((string)($payload['account']['email'] ?? ''));
+        $email    = trim((string)($payload['account']['email'] ?? ''));
         $password = (string)($payload['account']['password'] ?? '');
-        $confirm = (string)($payload['account']['confirm'] ?? '');
+        $confirm  = (string)($payload['account']['confirm'] ?? '');
 
-        $parent  = (array)($payload['parent'] ?? []);
-        $kids    = (array)($payload['kids'] ?? []);
-        $consents= (array)($payload['consents'] ?? []);
+        $parent   = (array)($payload['parent'] ?? []);
+        $kids     = (array)($payload['kids'] ?? []);
+        $consents = (array)($payload['consents'] ?? []);
 
         $errors = [];
 
@@ -90,11 +89,15 @@ final class RegistrationController extends AbstractController
         if ($errors) return new JsonResponse(['ok'=>false, 'errors'=>$errors], 422);
 
         // ---- Création
-        $user = (new User())
-            ->setEmail($email)
-            ->setPassword($hasher->hashPassword(new User(), $password)); // on hashe sur un User vierge ou $user après setEmail
+        $user = new User();
+        $user->setEmail($email);
+        // ✅ hasher sur l'instance $user (pas new User())
+        $user->setPassword($hasher->hashPassword($user, $password));
+        if (method_exists($user, 'setRoles'))      $user->setRoles(['ROLE_PARENT']);
+        if (method_exists($user, 'setIsApproved')) $user->setIsApproved(false);
 
-        $profile = (new ParentProfile())
+        $profile = new ParentProfile();
+        $profile
             ->setUser($user)
             ->setFirstName(trim((string)$parent['firstName']))
             ->setLastName(trim((string)$parent['lastName']))
@@ -106,20 +109,32 @@ final class RegistrationController extends AbstractController
             ->setPhotoConsent((bool)($consents['photo'] ?? false))
             ->setRgpdConsentAt(new \DateTimeImmutable());
 
-        $user->setProfile($profile);
+        if (method_exists($user, 'setProfile')) $user->setProfile($profile);
+
         $em->persist($user);
         $em->persist($profile);
 
         foreach ($kids as $k) {
-            $child = (new Child())
-                ->setParent($profile)
+            $child = new Child();
+            $child
+                ->setParent($profile) // si ton mapping est Child->ParentProfile
                 ->setFirstName(trim((string)($k['firstName'] ?? '')))
                 ->setLastName(trim((string)($k['lastName'] ?? '')))
                 ->setLevel((string)($k['level'] ?? ''))
                 ->setSchool($k['school'] ?? null)
                 ->setNotes($k['notes'] ?? null);
+
+            // date de naissance (optionnelle)
             $dob = $k['dob'] ?? null;
             if ($dob) { try { $child->setDateOfBirth(new \DateTime($dob)); } catch (\Exception $e) {} }
+
+            // ✅ NOUVEAU : retour autorisé (canLeaveAlone)
+            if (method_exists($child, 'setCanLeaveAlone')) {
+                $child->setCanLeaveAlone((bool)($k['canLeaveAlone'] ?? false));
+            }
+
+            if (method_exists($child, 'setIsApproved')) $child->setIsApproved(false);
+
             $em->persist($child);
         }
 

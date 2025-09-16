@@ -6,19 +6,19 @@
 
 
     <main id="contenu">
-        <!-- Hero avec photo en background -->
+
         <section class="hero hero-photo">
             <div class="container hero-inner">
                 <p class="eyebrow">Association loi 1901 • Stains</p>
                 <h1>Votre réussite, <span class="underline">c’est notre devoir</span>.</h1>
                 <p class="lead">Accompagnement scolaire, culture, citoyenneté & solidarité. Ensemble, construisons un avenir plus juste pour les jeunes et les familles.</p>
                 <div class="hero-links">
-                    <a class="link-cta primary" href="/adherer">
+                    <a class="link-cta primary" href="{{ path('app_register') }}">
                         <span class="label">Adhérer</span>
                         <span class="arrow" aria-hidden="true">→</span>
                         <span class="sub">Adhésion en 2&nbsp;min</span>
                     </a>
-                    <a class="link-cta" href="/benevole">
+                    <a class="link-cta" href="{{ path('app_benevole') }}">
                         <span class="label">Devenir bénévole</span>
                         <span class="arrow" aria-hidden="true">→</span>
                         <span class="sub">On vous accompagne</span>
@@ -29,7 +29,6 @@
 
 
 
-        <!-- 3 piliers (simple avec icônes) -->
         <section class="section pillars simple">
             <div class="container">
                 <header class="section-head">
@@ -43,7 +42,7 @@
                         <div class="feature-body">
                             <h3>Éducation & soutien scolaire</h3>
                             <p class="muted">Aide aux devoirs, méthodes, orientation et mentorat.</p>
-                            <a class="text-link" href="/actions#soutien-scolaire">En savoir plus</a>
+                            <a class="text-link" href="{{ path('app_asso') }}">En savoir plus</a>
                         </div>
                     </li>
 
@@ -52,7 +51,7 @@
                         <div class="feature-body">
                             <h3>Culture & loisirs</h3>
                             <p class="muted">Musées, théâtre, patrimoine et sorties nature.</p>
-                            <a class="text-link" href="/actions#culture">En savoir plus</a>
+                            <a class="text-link" href="{{ path('app_asso') }}">En savoir plus</a>
                         </div>
                     </li>
 
@@ -61,13 +60,14 @@
                         <div class="feature-body">
                             <h3>Citoyenneté & solidarité</h3>
                             <p class="muted">Prévention, médiation et aides ponctuelles avec les familles.</p>
-                            <a class="text-link" href="/actions#solidarite">En savoir plus</a>
+                            <a class="text-link" href="{{ path('app_asso') }}">En savoir plus</a>
                         </div>
                     </li>
                 </ul>
             </div>
         </section>
-        <!-- Chiffres clés -->
+
+
         <section class="section stats">
             <div class="container stats-row">
                 <div class="stat">
@@ -89,7 +89,7 @@
             </div>
         </section>
 
-        <!-- Événements à venir (aperçu) -->
+
         <section class="section alt">
             <div class="container">
                 <header class="section-head row-head">
@@ -97,43 +97,50 @@
                         <h2>À l’agenda</h2>
                         <p>Participez à nos prochains rendez-vous.</p>
                     </div>
-                    <a class="btn btn-outline" href="/evenements">Tous les événements</a>
+
                 </header>
 
-                <div class="events">
-                    <article class="ev card">
-                        <div class="date"><span class="d">20</span><span class="m">SEP</span></div>
-                        <div class="ev-body">
-                            <h3>Forum des associations</h3>
-                            <p class="muted">Stand & démonstrations — Gymnase Léo Lagrange</p>
-                            <a class="card-link" href="/evenements/forum-associations">Je viens</a>
+                {% set MOIS = {
+                    '1':'JAN','2':'FÉV','3':'MAR','4':'AVR','5':'MAI','6':'JUN',
+                    '7':'JUL','8':'AOÛ','9':'SEP','10':'OCT','11':'NOV','12':'DÉC'
+                } %}
+
+                {% if upcomingOutings is defined and upcomingOutings|length > 0 %}
+                    <div class="events">
+                        {% for o in upcomingOutings %}
+                            <article class="ev card">
+                                <div class="date">
+                                    <span class="d">{{ o.startsAt|date('d', 'Europe/Paris') }}</span>
+                                    <span class="m">{{ attribute(MOIS, o.startsAt|date('n', 'Europe/Paris')) }}</span>
+                                </div>
+                                <div class="ev-body">
+                                    <h3>{{ o.title }}</h3>
+                                    {% if o.location %}
+                                        <p class="muted">{{ o.location }}</p>
+                                    {% endif %}
+
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+
+                    <div class="card" style="display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap">
+                        <div>
+                            <h3 style="margin:0 0 6px">Rien au programme… pour le moment 🙂</h3>
+                            <p class="muted" style="margin:0">Revenez bientôt ou découvrez nos actions en attendant.</p>
                         </div>
-                    </article>
-                    <article class="ev card">
-                        <div class="date"><span class="d">27</span><span class="m">SEP</span></div>
-                        <div class="ev-body">
-                            <h3>Réunion bénévoles</h3>
-                            <p class="muted">Accueil des nouveaux, présentation des activités.</p>
-                            <a class="card-link" href="/evenements/reunion-benevoles">Je participe</a>
+                        <div class="row" style="gap:8px">
+                            <a class="btn" href="{{ path('app_asso') is defined ? path('app_asso') : '/asso' }}">Nos actions</a>
+                            <a class="btn btn-outline" href="{{ path('app_benevole') is defined ? path('app_benevole') : '/' }}">Nous rejoindre</a>
                         </div>
-                    </article>
-                    <article class="ev card">
-                        <div class="date"><span class="d">04</span><span class="m">OCT</span></div>
-                        <div class="ev-body">
-                            <h3>Portes ouvertes tutorat</h3>
-                            <p class="muted">Inscriptions et rencontre des familles.</p>
-                            <a class="card-link" href="/evenements/portes-ouvertes">Je m’inscris</a>
-                        </div>
-                    </article>
-                </div>
+                    </div>
+                {% endif %}
             </div>
         </section>
 
-        <!-- Appel à l’action principal -->
 
-        <!-- Appel à l’action principal (créatif) -->
 
-        <!-- Appel à l’action principal (band, sans box) -->
         <section class="cta band-cta" aria-labelledby="cta-title">
             <div class="container">
                 <div class="band-grid">
@@ -142,7 +149,7 @@
                         <p class="lead">Construisons ensemble un avenir solidaire et citoyen à Stains.</p>
 
                         <div class="band-actions">
-                            <a class="pill-btn fill" href="/adherer">
+                            <a class="pill-btn fill" href="{{ path('app_register') }}">
                                 <span class="i" aria-hidden="true">💜</span>
                                 <span class="t">
                   <strong>Adhérer</strong>
@@ -151,7 +158,7 @@
                                 <span class="arrow" aria-hidden="true">→</span>
                             </a>
 
-                            <a class="pill-btn outline" href="/benevole">
+                            <a class="pill-btn outline" href="{{ path('app_benevole') }}">
                                 <span class="i" aria-hidden="true">🤝</span>
                                 <span class="t">
                   <strong>Devenir bénévole</strong>

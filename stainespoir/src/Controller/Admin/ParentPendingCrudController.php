@@ -13,7 +13,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
-use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use Symfony\Component\HttpFoundation\Request;
@@ -69,7 +68,7 @@ class ParentPendingCrudController extends UserCrudController
     }
 
     /**
-     * Page Dossier (GET) + Traitement (POST) — CONTEXTE EASYADMIN
+     * Page Dossier (GET) + Traitement (POST)
      */
     public function review(AdminContext $context, Request $request): Response
     {
@@ -79,24 +78,27 @@ class ParentPendingCrudController extends UserCrudController
             $this->addFlash('danger', 'Parent introuvable.');
             return $this->redirect($this->urlGen->setController(self::class)->setAction(Crud::PAGE_INDEX)->generateUrl());
         }
-        if ($user->isApproved()) {
+        if (method_exists($user, 'isApproved') && $user->isApproved()) {
             $this->addFlash('info', 'Ce parent est déjà validé.');
             return $this->redirect($this->urlGen->setController(self::class)->setAction(Crud::PAGE_INDEX)->generateUrl());
         }
 
-        // Profil + libellé de relation (si dispo)
+        // Profil + libellé de relation (selon le nom de méthode réel)
         $profile = method_exists($user, 'getProfile') ? $user->getProfile() : null;
         $relationLabel = null;
         if ($profile) {
-            foreach (['getRelation', 'getGuardianRelation', 'getParentRelation', 'getLien', 'getLienAvecEnfant'] as $m) {
+            foreach ([
+                         'getRelationToChild', 'getRelation', 'getGuardianRelation',
+                         'getParentRelation', 'getLien', 'getLienAvecEnfant'
+                     ] as $m) {
                 if (method_exists($profile, $m)) { $relationLabel = $profile->{$m}(); break; }
             }
         }
 
-        // Enfants (détection dynamique du mapping)
+        // Enfants rattachés
         $children = $this->findChildrenForParent($user, $profile);
 
-        // ✅ ViewModels pour Twig (clés stables)
+        // VM pour Twig
         $childrenVm = array_map([$this, 'childToVm'], $children);
 
         // Soumission ?
@@ -107,7 +109,7 @@ class ParentPendingCrudController extends UserCrudController
             }
 
             $decision = (string) $request->request->get('decision', '');
-            // ⬇️ CHANGEMENT ICI : récupérer un tableau proprement
+            // récupère un tableau d’IDs cochés
             $approvedIds = array_map('intval', (array) $request->request->all('approved_children'));
 
             if ($decision === 'reject') {
@@ -120,8 +122,10 @@ class ParentPendingCrudController extends UserCrudController
             }
 
             if ($decision === 'approve') {
-                $user->setIsApproved(true);
-                if (!$user->getApprovedAt()) { $user->setApprovedAt(new \DateTimeImmutable()); }
+                if (method_exists($user, 'setIsApproved')) $user->setIsApproved(true);
+                if (method_exists($user, 'getApprovedAt') && method_exists($user, 'setApprovedAt')) {
+                    if (!$user->getApprovedAt()) { $user->setApprovedAt(new \DateTimeImmutable()); }
+                }
 
                 foreach ($children as $child) {
                     $id = method_exists($child,'getId') ? (int)$child->getId() : 0;
@@ -140,12 +144,12 @@ class ParentPendingCrudController extends UserCrudController
             $this->addFlash('warning', 'Aucune action effectuée.');
         }
 
-        // GET → afficher le dossier
+        // Affichage
         return $this->render('admin/pending/review_ea.html.twig', [
             'parent'        => $user,
             'profile'       => $profile,
             'relationLabel' => $relationLabel,
-            'children'      => $childrenVm, // VM vers Twig
+            'children'      => $childrenVm,
             'token_id'      => 'pending_decision_' . $user->getId(),
         ]);
     }
@@ -226,19 +230,26 @@ class ParentPendingCrudController extends UserCrudController
         }
         $dob = ($dobObj instanceof \DateTimeInterface) ? $dobObj->format('d/m/Y') : null;
 
+        // validé ?
         $approved = false;
         if (method_exists($child,'isApproved')) $approved = (bool)$child->isApproved();
         elseif (method_exists($child,'getIsApproved')) $approved = (bool)$child->getIsApproved();
 
+        // ✅ retour seul autorisé ?
+        $allow = false;
+        if (method_exists($child, 'isCanLeaveAlone'))      { $allow = (bool)$child->isCanLeaveAlone(); }
+        elseif (method_exists($child, 'getCanLeaveAlone')) { $allow = (bool)$child->getCanLeaveAlone(); }
+
         return [
-            'id'         => $id,
-            'firstName'  => $fn,
-            'lastName'   => $ln,
-            'level'      => $lvl,
-            'dob'        => $dob,
-            'school'     => $sch,
-            'notes'      => $notes,
-            'approved'   => $approved,
+            'id'            => $id,
+            'firstName'     => $fn,
+            'lastName'      => $ln,
+            'level'         => $lvl,
+            'dob'           => $dob,
+            'school'        => $sch,
+            'notes'         => $notes,
+            'approved'      => $approved,
+            'canLeaveAlone' => $allow,
         ];
     }
 }

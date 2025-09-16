@@ -1,107 +1,189 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
 {% block content %}
-    {# Flashs #}
     {% for label, msgs in app.flashes %}
         {% for m in msgs %}<div class="alert alert-{{ label }}">{{ m }}</div>{% endfor %}
     {% endfor %}
 
     <style>
-        /* ====== Mobile-first styles ====== */
-        .p-toolbar{
-            position: sticky; top: 0; z-index: 5;
-            background: #fff; padding: .75rem; margin: -1rem -1rem .5rem;
-            border-bottom: 1px solid #e5e7eb;
+        /* ===== Variables Bootstrap/EasyAdmin (clair + sombre) ===== */
+        :root{
+            --card-bg: var(--bs-body-bg);
+            --card-border: var(--bs-border-color, #e5e7eb);
+            --muted: var(--bs-secondary-color, #6b7280);
+            --chip-bg: var(--bs-tertiary-bg, #f1f5f9);
+            --chip-border: var(--bs-border-color, #e5e7eb);
+            --seg-bg: var(--bs-tertiary-bg, #f1f5f9);
+            --seg-active-bg: var(--bs-body-bg, #fff);
+
+            /* Accents */
+            --ok: #16a34a;     /* green-600 */
+            --no: #dc2626;     /* red-600 */
+            --nu: #64748b;     /* slate-500 */
+
+            /* Contraste contextuel (noir en clair, blanc en sombre) */
+            --on-bg: #000;
         }
-        .p-row{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center }
-        .p-row .grow{ flex:1 1 auto }
-        .p-kpis{ display:flex; gap:.5rem; flex-wrap:wrap }
-        .badge-chip{
-            display:inline-flex; align-items:center; gap:.35rem;
-            padding:.35rem .55rem; border-radius:999px; font-size:.9rem; border:1px solid #e5e7eb; background:#f8fafc;
+        .ea-dark{ --on-bg: #fff; }
+
+        /* === Déductions pour lignes enfants (pas de fond blanc) === */
+        :root{
+            --row-border:   color-mix(in oklab, var(--card-border), var(--on-bg) 10%);
+            --row-alt-bg:   color-mix(in oklab, var(--bs-body-bg), var(--on-bg) 3%);  /* zebra subtil */
+            --row-hover-bg: color-mix(in oklab, var(--bs-body-bg), var(--on-bg) 6%);  /* hover doux */
+            --ring-ok:      color-mix(in oklab, var(--ok),   var(--bs-body-bg) 78%);
+            --ring-no:      color-mix(in oklab, var(--no),   var(--bs-body-bg) 78%);
+            --ring-nu:      color-mix(in oklab, var(--nu),   var(--bs-body-bg) 78%);
+            --sel-ok:       color-mix(in oklab, var(--ok),   var(--bs-body-bg) 82%);
+            --sel-no:       color-mix(in oklab, var(--no),   var(--bs-body-bg) 84%);
+            --sel-nu:       color-mix(in oklab, var(--nu),   var(--bs-body-bg) 86%);
+        }
+
+        .p-head{ margin-bottom: .75rem }
+        .p-sub{ font-size:.95rem; color: var(--muted) }
+
+        .p-controls{
+            display: block;
+            padding: .9rem;
+            margin-bottom: 1rem;
+        }
+        .grid{
+            display:grid; gap:.75rem;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 992px){ .grid{ grid-template-columns: 1fr; } }
+
+        .chips{ display:flex; gap:.5rem; flex-wrap:wrap }
+        .chip{
+            display:inline-flex; align-items:center; gap:.4rem;
+            padding:.4rem .6rem; border-radius:999px; border:1px solid var(--chip-border);
+            background: var(--chip-bg); font-weight:500;
         }
         .dot{ width:10px; height:10px; border-radius:50% }
-        .dot.y{ background:#16a34a } .dot.n{ background:#dc2626 } .dot.u{ background:#9ca3af }
+        .dot.y{ background:var(--ok) } .dot.n{ background:var(--no) } .dot.u{ background:var(--nu) }
 
-        .p-actions{ display:flex; gap:.5rem; flex-wrap:wrap }
-        .btn-xs{ padding:.35rem .6rem; font-size:.9rem }
+        .row-inline{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center }
+        .row-inline .grow{ flex:1 1 260px }
 
-        .p-search{ display:flex; gap:.5rem; margin-top:.5rem }
-        .p-search input[type="search"]{ flex:1 1 auto }
+        /* ===== Liste enfants SANS fond blanc ===== */
+        .kid-list{ display:grid; gap:.6rem }
+        .kid{
+            display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+            padding:.75rem .85rem; border:1px solid var(--row-border);
+            border-radius:.75rem; background: transparent;        /* ⟵ plus de blanc */
+            transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+        .kid:nth-child(odd){ background: var(--row-alt-bg); }      /* zébrage subtil */
+        .kid:hover{ background: var(--row-hover-bg); }
+        .kid:focus-within{ outline: 2px solid color-mix(in oklab, var(--on-bg), transparent 82%); outline-offset: 2px }
 
-        /* Liste enfants */
-        .kid-list{ display:grid; gap:.5rem; margin-top:.75rem }
-        .kid{ display:flex; align-items:center; gap:.75rem; padding:.65rem .75rem; border:1px solid #e5e7eb; border-radius:.75rem; background:#fff }
-        .kid .who{ min-width: 0 }
+        /* Marqueur latéral selon l’état (ultra lisible) */
+        .kid[data-state="present"]{ border-left: 4px solid var(--ok);    padding-left: .65rem; }
+        .kid[data-state="absent"] { border-left: 4px solid var(--no);    padding-left: .65rem; }
+        .kid[data-state="unset"]  { border-left: 4px solid var(--row-border); padding-left: .65rem; }
+
+        .who{ min-width:0 }
         .who b{ display:block; font-size:1rem }
-        .who .muted{ color:#6b7280; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-        .seg{ display:inline-flex; border:1px solid #e5e7eb; border-radius:.6rem; overflow:hidden }
+        .who .muted{ color: var(--muted); font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+        /* ===== Segmented control — sélection TRÈS visible ===== */
+        .seg{
+            display:inline-flex; border:1px solid var(--row-border); border-radius:.6rem; overflow:hidden;
+            background: transparent;
+        }
         .seg input{ position:absolute; opacity:0; pointer-events:none }
         .seg label{
-            padding:.45rem .6rem; min-width:72px; text-align:center; cursor:pointer; user-select:none;
-            background:#f8fafc; border-right:1px solid #e5e7eb; font-weight:500;
+            padding:.5rem .9rem; min-width:108px; text-align:center; cursor:pointer; user-select:none;
+            background: transparent; border-right:1px solid var(--row-border); font-weight:600;
+            display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+            color: color-mix(in oklab, var(--on-bg), transparent 35%);
         }
         .seg label:last-child{ border-right:none }
-        .seg label[data-v="present"]{ color:#166534 }      /* green-800 */
-        .seg label[data-v="absent"]{ color:#991b1b }       /* red-800 */
-        .seg label[data-v="unset"]{ color:#374151 }        /* gray-700 */
-        .seg input:checked + label{ background:#fff; box-shadow: inset 0 0 0 2px rgba(0,0,0,.04) }
 
-        /* Desktop améliorations */
-        @media (min-width: 880px){
-            .kid{ padding: .65rem 1rem }
-            .seg label{ min-width:86px }
+        /* État sélectionné : fond teinté + anneau + icône */
+        .seg input:checked + label[data-v="present"]{
+            background: var(--sel-ok); box-shadow: 0 0 0 2px var(--ring-ok) inset;
+            color: color-mix(in oklab, var(--ok), var(--on-bg) 30%);
+        }
+        .seg input:checked + label[data-v="absent"]{
+            background: var(--sel-no); box-shadow: 0 0 0 2px var(--ring-no) inset;
+            color: color-mix(in oklab, var(--no), var(--on-bg) 30%);
+        }
+        .seg input:checked + label[data-v="unset"]{
+            background: var(--sel-nu); box-shadow: 0 0 0 2px var(--ring-nu) inset;
+            color: color-mix(in oklab, var(--nu), var(--on-bg) 30%);
+        }
+        .seg input:checked + label::before{
+            font-weight:800; display:inline-block; line-height:1;
+        }
+        .seg input:checked + label[data-v="present"]::before{ content:'✓'; }
+        .seg input:checked + label[data-v="absent"]::before { content:'✗'; }
+        .seg input:checked + label[data-v="unset"]::before  { content:'—'; }
+
+        /* Focus clavier */
+        .seg label:focus-visible{
+            outline: 2px solid color-mix(in oklab, var(--on-bg), transparent 75%);
+            outline-offset: 2px;
         }
 
-        /* Barre d’enregistrement sticky */
+        /* Barre d’enregistrement */
         .savebar{
-            position: sticky; bottom: 0; z-index: 5; margin: .75rem -1rem -1rem;
-            padding: .75rem 1rem; background: linear-gradient(180deg, rgba(255,255,255,.6), #fff 35%);
-            border-top: 1px solid #e5e7eb; display:flex; gap:.5rem; justify-content:flex-end;
+            position: sticky; bottom: 0; z-index: 5; margin: 1rem -1rem -1rem;
+            padding: .9rem 1rem; background: linear-gradient(180deg, color-mix(in oklab, var(--card-bg), transparent 40%), var(--card-bg) 35%);
+            border-top: 1px solid var(--card-border); display:flex; gap:.6rem; justify-content:flex-end;
         }
 
-        /* Accessibilité focus visible */
-        .seg label:focus-visible, .btn:focus-visible, input[type="search"]:focus-visible, input[type="date"]:focus-visible{
-            outline: 2px solid #6A1B9A; outline-offset: 2px;
-        }
+        .content-wrapper { display: block; }
     </style>
 
-    <h1 class="mb-2">Présences — fiche du {{ date|date('d/m/Y') }}</h1>
+    <div class="p-head" style="display:block;">
+        <h1 class="mb-1">Présences — fiche du {{ date|date('d/m/Y', 'Europe/Paris') }}</h1>
+        {% if existingCount > 0 %}
+            <div class="p-sub">✔ {{ existingCount }} enregistrement(s) déjà saisi(s) pour cette date — chargés ci-dessous.</div>
+        {% else %}
+            <div class="p-sub">Aucun émargement encore saisi pour cette date.</div>
+        {% endif %}
+    </div>
 
-    {# ========== Barre de contrôle (mobile-first) ========== #}
-    <div class="p-toolbar">
-        <form class="p-row" method="get" action="{{ path('admin_presences') }}">
-            <div class="grow">
-                <label class="form-label mb-1"><b>Date</b></label>
-                <input type="date" name="date" value="{{ date|date('Y-m-d') }}" class="form-control" onchange="this.form.submit()">
+    {# ——— Contrôles AU-DESSUS de la liste ——— #}
+    <div class="p-controls">
+        <form class="grid" method="get" action="{{ path('admin_presences') }}">
+            <div class="row-inline">
+                <div>
+                    <label class="form-label mb-1"><b>Date</b></label>
+                    <input type="date" name="date" value="{{ date|date('Y-m-d', 'Europe/Paris') }}" class="form-control" onchange="this.form.submit()">
+                </div>
+
+                <div class="grow">
+                    <div class="chips" aria-label="Compteurs">
+                        <span class="chip"><span class="dot y"></span> Présents : <b id="kpiY">0</b></span>
+                        <span class="chip"><span class="dot n"></span> Absents : <b id="kpiN">0</b></span>
+                        <span class="chip"><span class="dot u"></span> — : <b id="kpiU">0</b></span>
+                    </div>
+                </div>
             </div>
 
-            <div class="p-kpis">
-                <span class="badge-chip"><span class="dot y"></span><span>Présents:</span><b id="kpiY">0</b></span>
-                <span class="badge-chip"><span class="dot n"></span><span>Absents:</span><b id="kpiN">0</b></span>
-                <span class="badge-chip"><span class="dot u"></span><span>— :</span><b id="kpiU">0</b></span>
-            </div>
-
-            <div class="p-actions">
-                <button class="btn btn-outline-success btn-xs" type="button" id="btnAllPresent">Tout présent</button>
-                <button class="btn btn-outline-danger btn-xs"  type="button" id="btnAllAbsent">Tout absent</button>
-                <button class="btn btn-outline-secondary btn-xs" type="button" id="btnAllUnset">Tout —</button>
-            </div>
-
-            <div class="p-search">
-                <input type="search" id="q" class="form-control" placeholder="Rechercher un enfant (nom, niveau)…" aria-label="Rechercher un enfant">
+            <div class="row-inline">
+                <input type="search" id="q" class="form-control grow" placeholder="Rechercher un enfant (nom, niveau)…" aria-label="Rechercher un enfant">
                 <label class="form-check" style="white-space:nowrap">
                     <input type="checkbox" class="form-check-input" id="onlyUnset">
                     <span class="form-check-label">Afficher uniquement —</span>
                 </label>
             </div>
+
+            <div class="row-inline">
+                <button class="btn btn-outline-success btn-sm" type="button" id="btnAllPresent">Tout présent</button>
+                <button class="btn btn-outline-danger btn-sm"  type="button" id="btnAllAbsent">Tout absent</button>
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="btnAllUnset">Tout —</button>
+            </div>
         </form>
     </div>
 
-    {# ========== Formulaire de soumission (POST) ========== #}
-    <form method="post" action="{{ path('admin_presences', { date: date|date('Y-m-d') }) }}">
+    {# ——— Liste + POST ——— #}
+    <form method="post" action="{{ path('admin_presences') }}">
+        <input type="hidden" name="date" value="{{ app.request.query.get('date') ?: date|date('Y-m-d', 'Europe/Paris') }}">
         <input type="hidden" name="do" value="save">
-        <input type="hidden" name="_token" value="{{ csrf_token(token_id) }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('presence_save') }}">
 
         <div class="kid-list" id="kidList">
             {% for c in children %}
@@ -139,9 +221,7 @@
         </div>
 
         <div class="savebar">
-            <button class="btn btn-primary btn-lg" type="submit">
-                Enregistrer
-            </button>
+            <button class="btn btn-primary btn-lg" type="submit">Enregistrer</button>
         </div>
     </form>
 
@@ -159,10 +239,11 @@
             function updateKPIs(){
                 let y=0,n=0,u=0;
                 list.querySelectorAll('.kid').forEach(k=>{
-                    const hidden = k.style.display === 'none';
-                    if (hidden) return; // KPIs sur la vue filtrée ? -> ici on compte TOUTES les lignes visibles
+                    if (k.style.display === 'none') return;
                     const state = k.dataset.state || 'unset';
-                    if (state==='present') y++; else if (state==='absent') n++; else u++;
+                    if (state==='present') y++;
+                    else if (state==='absent') n++;
+                    else u++;
                 });
                 kpiY.textContent=y; kpiN.textContent=n; kpiU.textContent=u;
             }
@@ -170,8 +251,7 @@
             function applyFilters(){
                 const term = (q.value || '').trim().toLowerCase();
                 const onlyU = !!onlyUnset.checked;
-                const rows = list.querySelectorAll('.kid');
-                rows.forEach(k=>{
+                list.querySelectorAll('.kid').forEach(k=>{
                     const matchText = (k.dataset.name + ' ' + k.dataset.level).includes(term);
                     const isU = k.dataset.state === 'unset';
                     const show = matchText && (!onlyU || isU);
@@ -180,31 +260,29 @@
                 updateKPIs();
             }
 
-            // Quand on clique sélection Présent/Absent/— : mettre data-state à jour
             list.addEventListener('change', (e)=>{
                 const input = e.target;
                 if (input && input.name && input.name.startsWith('st[')) {
                     const kid = input.closest('.kid');
                     if (!kid) return;
                     kid.dataset.state = input.value || 'unset';
-                    applyFilters(); // met aussi à jour KPIs
+                    applyFilters();
                 }
             });
 
-            // Boutons "Tout ..."
             function setAll(val){
-                list.querySelectorAll('input[type=radio][value="'+val+'"]').forEach(r => { r.checked = true; r.dispatchEvent(new Event('change', {bubbles:true})); });
+                list.querySelectorAll('input[type=radio][value="'+val+'"]').forEach(r => {
+                    r.checked = true; r.dispatchEvent(new Event('change', {bubbles:true}));
+                });
             }
             document.getElementById('btnAllPresent')?.addEventListener('click', ()=> setAll('present'));
             document.getElementById('btnAllAbsent') ?.addEventListener('click', ()=> setAll('absent'));
             document.getElementById('btnAllUnset')  ?.addEventListener('click', ()=> setAll('unset'));
 
-            // Recherche + filtre
             q?.addEventListener('input', applyFilters);
             onlyUnset?.addEventListener('change', applyFilters);
 
-            // Init
-            applyFilters();
+            applyFilters(); // init
         })();
     </script>
 {% endblock %}

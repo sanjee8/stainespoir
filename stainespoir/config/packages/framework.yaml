@@ -10,6 +10,7 @@ framework:
 
 when@test:
     framework:
+        timezone: 'Europe/Paris'
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file

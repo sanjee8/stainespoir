@@ -2,8 +2,20 @@ twig:
     file_name_pattern: '*.twig'
     globals:
         main_nav:
-            - { label: "Accueil",       route: "app_home",          active_when: ["^app_home$"] }
-            - { label: "L’association", route: "app_asso",   active_when: ["^app_asso$"] }
+            - { label: 'Accueil',       route: 'app_home',  active_when: ['^app_home$'] }
+            - { label: "L’association", route: 'app_asso',  active_when: ['^app_asso$'] }
+            - { label: "Comment devenir bénévole ?", route: 'app_benevole',  active_when: ['^app_benevole'] }
+            - label: 'Espace familles'
+              type: 'dropdown'
+              active_when:
+                  - '^app_login$'
+                  - '^app_register$'
+                  - '^app_account$'
+              children:
+                  - { label: 'Se connecter',    route: 'app_login',    show_when: 'guest' }
+                  - { label: 'Créer un compte', route: 'app_register', show_when: 'guest' }
+                  - { label: 'Mon compte',      route: 'app_account',  show_when: 'auth'  }
+                  - { label: 'Se déconnecter',  route: 'app_logout',   show_when: 'auth', is_logout: true }
 
 when@test:
     twig:

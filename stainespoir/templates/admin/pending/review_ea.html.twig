@@ -51,6 +51,7 @@
                                             <th>Niveau</th>
                                             <th>Naissance</th>
                                             <th>Établissement</th>
+                                            <th>Sortie autorisé ?</th>
                                             <th>Notes</th>
                                         </tr>
                                         </thead>
@@ -65,6 +66,14 @@
                                                 <td>{{ c.level ?: '—' }}</td>
                                                 <td>{{ c.dob ?: '—' }}</td>
                                                 <td>{{ c.school ?: '—' }}</td>
+                                                <td>
+                                                    {% if c.canLeaveAlone %}
+                                                        <span class="badge bg-success ok">Retour seul autorisé</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary warn">Retour seul interdit</span>
+                                                    {% endif %}
+                                                    
+                                                </td>
                                                 <td>{{ c.notes ?: '—' }}</td>
                                             </tr>
                                         {% endfor %}

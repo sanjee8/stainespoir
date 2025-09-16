@@ -1,6 +1,6 @@
 <?php
 namespace App\Controller\Admin;
-
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use App\Entity\User;
 use App\Entity\Child;
 use App\Entity\OutingRegistration;
@@ -23,12 +23,20 @@ use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TelephoneField;
+use App\Form\ChildInlineType;
+use App\Entity\ParentProfile;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class ParentValidatedCrudController extends UserCrudController
 {
     public function __construct(
         EntityManagerInterface $em,
-        private AdminUrlGenerator $urlGen
+        private AdminUrlGenerator $urlGen,
+        private UserPasswordHasherInterface $hasher,
     ) { parent::__construct($em); }
 
     public function configureCrud(Crud $crud): Crud
@@ -39,15 +47,53 @@ class ParentValidatedCrudController extends UserCrudController
             ->setDefaultSort(['approvedAt' => 'DESC']);
     }
 
-    /** Index : Nom, Email, Validé le */
     public function configureFields(string $pageName): iterable
     {
         if ($pageName === Crud::PAGE_INDEX) {
-            yield TextField::new('fullName', 'Nom prénom');
-            yield EmailField::new('email', 'Email');
-            yield DateTimeField::new('approvedAt', 'Validé le');
-            return;
+            return [
+                TextField::new('fullName', 'Nom prénom'),
+                EmailField::new('email', 'Email'),
+                DateTimeField::new('approvedAt', 'Validé le'),
+            ];
         }
+
+        if ($pageName === Crud::PAGE_EDIT) {
+            return [
+                FormField::addPanel('Compte (User)')->setIcon('fa fa-user-check'),
+                EmailField::new('email', 'Email'),
+                BooleanField::new('isApproved', 'Compte validé'),
+
+                // ⬇️ Champ non mappé pour changer le mot de passe
+                TextField::new('newPassword', 'Nouveau mot de passe')
+                    ->setFormType(PasswordType::class)
+                    ->setFormTypeOptions([
+                        'mapped' => false,
+                        'required' => false,
+                        'attr' => ['autocomplete' => 'new-password'],
+                    ])
+                    ->onlyOnForms(),
+
+                FormField::addPanel('Profil parent')->setIcon('fa fa-id-card'),
+                TextField::new('profile.firstName', 'Prénom')->setFormTypeOption('property_path', 'profile.firstName'),
+                TextField::new('profile.lastName',  'Nom')    ->setFormTypeOption('property_path', 'profile.lastName'),
+                TelephoneField::new('profile.phone','Téléphone')->setFormTypeOption('property_path', 'profile.phone'),
+                TextField::new('profile.address',   'Adresse')->setFormTypeOption('property_path', 'profile.address')->setColumns(12),
+                TextField::new('profile.postalCode','Code postal')->setFormTypeOption('property_path', 'profile.postalCode')->setColumns(4),
+                TextField::new('profile.city',      'Ville')->setFormTypeOption('property_path', 'profile.city')->setColumns(8),
+                // enlève / adapte si tu n'as pas ce champ :
+                // TextField::new('profile.relation','Lien avec l’enfant')->setFormTypeOption('property_path','profile.relation'),
+
+                FormField::addPanel('Enfants rattachés')->setIcon('fa fa-children'),
+                CollectionField::new('children', 'Enfants')
+                    ->setFormTypeOption('property_path', 'profile.children')
+                    ->setEntryType(ChildInlineType::class)
+                    ->setFormTypeOptions(['by_reference' => false])
+                    ->allowAdd()->allowDelete()
+                    ->setEntryIsComplex(true),
+            ];
+        }
+
+        // DETAIL (ou autres pages) : garde ton comportement par défaut
         return parent::configureFields($pageName);
     }
 
@@ -160,12 +206,19 @@ class ParentValidatedCrudController extends UserCrudController
             }
         }
 
+        $addChildUrl = $this->urlGen
+            ->setController(\App\Controller\Admin\ChildCrudController::class)
+            ->setAction(Action::NEW)
+            ->set('parentId', $user->getId())  // ← juste ça
+            ->generateUrl();
+
         return $this->render('admin/parents/validated_dossier.html.twig', [
             'parent'          => $user,
             'profile'         => $profile,
             'children'        => $children,
             'signedOutings'   => $signedOutings,
             'messagesByChild' => $messagesByChild,
+            'addChildUrl'     => $addChildUrl,
         ]);
     }
 
@@ -280,4 +333,58 @@ class ParentValidatedCrudController extends UserCrudController
         $url = $this->urlGen->setController(self::class)->setAction('detail')->setEntityId($parentId)->generateUrl();
         return $this->redirect($url.'#chat-'.$childId);
     }
+
+    public function updateEntity(EntityManagerInterface $em, $entityInstance): void
+    {
+        if ($entityInstance instanceof User) {
+            // 1) Si profil manquant, on sécurise (normalement déjà créé dans edit())
+            $profile = method_exists($entityInstance,'getProfile') ? $entityInstance->getProfile() : null;
+            if (null === $profile) {
+                $profile = new ParentProfile();
+                if (method_exists($profile, 'setUser'))   { $profile->setUser($entityInstance); }
+                if (method_exists($entityInstance, 'setProfile')) { $entityInstance->setProfile($profile); }
+                $em->persist($profile);
+            }
+
+            // 2) Back-reference des enfants si tu édites profile.children
+            if ($profile && method_exists($profile,'getChildren')) {
+                foreach ($profile->getChildren() as $child) {
+                    if ($child instanceof \App\Entity\Child && method_exists($child,'setParent') && $child->getParent() !== $profile) {
+                        $child->setParent($profile);
+                        $em->persist($child);
+                    }
+                }
+            }
+
+            // 3) Récupérer la valeur du champ non mappé 'newPassword' et hasher
+            $form = $this->getContext()->getCrud()->getForm();
+            if ($form && $form->has('newPassword')) {
+                $plain = (string) $form->get('newPassword')->getData();
+                if ($plain !== '') {
+                    $hash = $this->hasher->hashPassword($entityInstance, $plain);
+                    if (method_exists($entityInstance, 'setPassword')) {
+                        $entityInstance->setPassword($hash);
+                    }
+                }
+            }
+        }
+
+        parent::updateEntity($em, $entityInstance);
+    }
+
+    public function edit(AdminContext $context)
+    {
+        $entity = $context->getEntity()->getInstance();
+        if ($entity instanceof User) {
+            if (method_exists($entity, 'getProfile') && null === $entity->getProfile()) {
+                $profile = new ParentProfile();
+                if (method_exists($profile, 'setUser'))   { $profile->setUser($entity); }
+                if (method_exists($entity, 'setProfile')) { $entity->setProfile($profile); }
+                $this->em->persist($profile);
+                $this->em->flush(); // important : évite le PropertyAccessor sur null
+            }
+        }
+        return parent::edit($context);
+    }
+
 }

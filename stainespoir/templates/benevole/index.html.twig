@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}L'Association{% endblock %}
+
+{% block body %}
+    <main id="contenu" class="vb">
+        <!-- HERO -->
+        <section class="vb-hero">
+            <div class="container vb-hero-wrap">
+                <div class="vb-hero-left">
+                    <span class="vb-pill">🤝 Bénévolat</span>
+                    <h1>Rejoins la Team des bénévoles Stains Espoir !</h1>
+                    <p class="vb-lead">
+                        Envie de donner un peu de ton temps pour aider des jeunes à réussir, partager ton énergie
+                        et vivre une belle aventure humaine&nbsp;?
+                    </p>
+                    <div class="vb-cta-row">
+                        <a class="vb-btn" href="{{ setting('social.instagram_url') }}" target="_blank" rel="noopener">📸 Rejoins-nous sur Instagram</a>
+                        <a class="vb-btn vb-btn--ghost" href="/contact">✉️ Formulaire de contact</a>
+                    </div>
+                </div>
+                <div class="vb-hero-right" aria-hidden="true">
+                    <div class="vb-bubbles">
+                        <span>🎓</span><span>🌍</span><span>🚀</span><span>💜</span><span>🤝</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RAISONS -->
+        <section class="vb-band">
+            <div class="container">
+                <div class="vb-reasons">
+                    <article class="vb-reason">
+                        <div class="vb-ico">🤝</div>
+                        <div class="vb-reason-body">
+                            <h3>Un impact concret</h3>
+                            <p>En aidant un jeune à progresser, tu contribues directement à sa réussite scolaire et personnelle.</p>
+                        </div>
+                    </article>
+
+                    <article class="vb-reason">
+                        <div class="vb-ico">🌍</div>
+                        <div class="vb-reason-body">
+                            <h3>Une ouverture</h3>
+                            <p>Rencontre d’autres bénévoles, découvre des cultures, crée du lien dans une ambiance conviviale.</p>
+                        </div>
+                    </article>
+
+                    <article class="vb-reason">
+                        <div class="vb-ico">🚀</div>
+                        <div class="vb-reason-body">
+                            <h3>Une expérience valorisante</h3>
+                            <p>Tu développes des compétences pédagogiques, relationnelles et humaines précieuses pour ton avenir.</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEPS -->
+        <section class="vb-steps">
+            <div class="container">
+                <div class="vb-steps-head">
+                    <span class="vb-pill">👣 Comment ça marche ?</span>
+                </div>
+
+                <ol class="vb-timeline">
+                    <li class="vb-step">
+                        <div class="vb-step-num">1</div>
+                        <div class="vb-step-body">
+                            <h4>💌 Contacte-nous</h4>
+                            <p>Directement sur Instagram ou via le formulaire.</p>
+                            <div class="vb-mini-cta">
+                                <a class="vb-chip" href="{{ setting('social.instagram_url') }}" target="_blank" rel="noopener">📸 Instagram</a>
+                                <a class="vb-chip vb-chip--ghost" href="/contact">✉️ Formulaire</a>
+                            </div>
+                        </div>
+                    </li>
+
+                    <li class="vb-step">
+                        <div class="vb-step-num">2</div>
+                        <div class="vb-step-body">
+                            <h4>📅 Viens un samedi</h4>
+                            <p>Participe pendant le soutien scolaire pour découvrir l’ambiance et l’équipe.</p>
+                            <p class="vb-hint">Tous les samedis — 10h–12h — Maison des associations, Stains.</p>
+                        </div>
+                    </li>
+
+                    <li class="vb-step">
+                        <div class="vb-step-num">3</div>
+                        <div class="vb-step-body">
+                            <h4>🌟 Bienvenue dans la Team !</h4>
+                            <p>Si l’expérience te plaît, tu rejoins officiellement les bénévoles Stains Espoir.</p>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- CTA FINAL -->
+        <section class="vb-cta-final">
+            <div class="container vb-cta-box">
+                <h2>Prêt(e) à faire la différence ? 💜</h2>
+                <div class="vb-cta-row">
+                    <a class="vb-btn" href="{{ setting('social.instagram_url') }}" target="_blank" rel="noopener">📸 Rejoins-nous sur Instagram</a>
+                    <a class="vb-btn vb-btn--ghost" href="/contact">✉️ Formulaire de contact</a>
+                </div>
+            </div>
+        </section>
+    </main>
+{% endblock %}

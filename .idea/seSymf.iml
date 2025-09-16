@@ -141,6 +141,8 @@
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/symfony/uid" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/symfony/ux-twig-component" />
       <excludeFolder url="file://$MODULE_DIR$/stainespoir/vendor/twig/html-extra" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/apache-pack" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
