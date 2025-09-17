@@ -1,0 +1,172 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Inviter — {{ outing.title }}{% endblock %}
+
+{% block main %}
+    <style>
+        .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+        @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+        .card{border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+        .card > .head{padding:12px 14px;border-bottom:1px solid #f0f0f0;font-weight:700}
+        .card > .body{padding:12px 14px}
+        .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .chips{display:flex;gap:8px;flex-wrap:wrap}
+        .chip{padding:6px 10px;border:1px solid #e5e7eb;border-radius:999px;background:#f9fafb}
+        .muted{color:#6b7280}
+        .btnx{padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;cursor:pointer}
+        .wide{width:100%}
+        textarea,input,select{padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+        .inline-check { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; margin-left: 15px }
+        .inline-check input[type="checkbox"] { width:auto; margin:0; display:inline-block; }
+        .inline-check label { margin:0; display:inline-block; }
+
+    </style>
+
+    <div class="grid">
+        <form class="card" method="post" action="{{ path('admin_outing_invite', {id: outing.id}) }}">
+            <div class="head">Paramètres d’invitation</div>
+            <div class="body">
+                <input type="hidden" name="_token" value="{{ csrf_token('invite_outing_' ~ outing.id) }}">
+
+                <p class="muted">
+                    Sortie : <b>{{ outing.title }}</b>
+                    — {{ outing.startsAt|date('d/m/Y H:i') }}{% if outing.location %} · {{ outing.location }}{% endif %}
+                </p>
+
+                <h4>1) Choisir les destinataires</h4>
+                <div class="row inline-check">
+                    <input type="checkbox" id="only_eligible" name="only_eligible" value="1" checked >
+                    <label for="only_eligible" class="muted" >Ignorer ceux déjà inscrits</label>
+                </div>
+
+
+                <div style="margin-top:10px">
+                    <div class="muted" style="margin-bottom:6px">Par niveau (multi)</div>
+                    <div class="chips">
+                        {% for it in levels %}
+                            <label class="chip"><input type="checkbox" name="levels[]" value="{{ it.level }}" style="margin-right:6px">{{ it.level }} · {{ it.n }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="margin-top:10px">
+                    <div class="muted" style="margin-bottom:6px">Ajouter des enfants (recherche par nom)</div>
+                    <div id="childPicker" class="wide">
+                        <input type="text" id="cpInput" placeholder="Tapez un nom..." autocomplete="off" class="wide">
+                        <div id="cpResults" style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;background:#fff;display:none;max-height:220px;overflow:auto"></div>
+                        <div id="cpChosen" class="chips" style="margin-top:8px"></div>
+                        {# les <input type="hidden" name="child_ids[]"> seront ajoutés ici dynamiquement #}
+                    </div>
+                </div>
+
+                <h4 style="margin-top:14px">2) Notification aux parents</h4>
+                <div class="row inline-check">
+                    <label class="row" style="gap:6px">
+                        <input type="checkbox" name="send_message" value="1">
+                        <span class="muted">Créer un message côté parent</span>
+                    </label>
+                </div>
+
+                <textarea class="wide" name="message_tpl" rows="5" placeholder="Texte (optionnel). Placeholders : {ENFANT} {SORTIE} {DATE} {LIEU}"></textarea>
+
+                <div class="row" style="margin-top:14px">
+                    <button class="btnx" type="submit">Lancer les invitations</button>
+                    <a class="btnx" href="{{ groupedUrl }}">Voir les inscriptions</a>
+                </div>
+            </div>
+        </form>
+
+        <div class="card">
+            <div class="head">Relancer les non-répondants</div>
+            <div class="body">
+                <form method="post" action="{{ path('admin_outing_remind', {id: outing.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('remind_outing_' ~ outing.id) }}">
+                    <div class="row inline-check">
+                        <label class="row" style="gap:6px;margin-bottom:8px">
+                            <input type="checkbox" name="send_message" value="1" checked>
+                            <span class="muted">Envoyer un message aux parents</span>
+                        </label>
+                    </div>
+
+                    <textarea class="wide" name="message_tpl" rows="4" placeholder="Texte de relance (optionnel)"></textarea>
+                    <div class="row" style="margin-top:10px">
+                        <button class="btnx" type="submit">Relancer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            const input   = document.getElementById('cpInput');
+            const results = document.getElementById('cpResults');
+            const chosen  = document.getElementById('cpChosen');
+            const picked  = new Map(); // id -> {id, firstName, lastName, level}
+
+            function renderResults(items){
+                results.innerHTML = '';
+                if (!items.length){ results.style.display='none'; return; }
+                items.forEach(it=>{
+                    if (picked.has(it.id)) return;
+                    const row = document.createElement('div');
+                    row.style.padding='8px 10px';
+                    row.style.cursor='pointer';
+                    row.style.borderTop='1px solid #f0f0f0';
+                    row.textContent = `${(it.lastName||'').toUpperCase()} ${it.firstName||''} — ${it.level||''}`;
+                    row.addEventListener('click', ()=>addChild(it));
+                    results.appendChild(row);
+                });
+                results.style.display = results.children.length ? 'block' : 'none';
+            }
+
+            function addChild(it){
+                if (picked.has(it.id)) return;
+                picked.set(it.id, it);
+                // chip
+                const chip = document.createElement('span');
+                chip.className = 'chip';
+                chip.textContent = `${it.firstName||''} ${it.lastName||''} — ${it.level||''} `;
+                const x = document.createElement('button');
+                x.type='button'; x.textContent='×';
+                x.style.marginLeft='6px';
+                x.addEventListener('click', ()=>{
+                    picked.delete(it.id);
+                    chip.remove();
+                    hidden.remove();
+                });
+                chip.appendChild(x);
+                chosen.appendChild(chip);
+                // hidden
+                const hidden = document.createElement('input');
+                hidden.type='hidden';
+                hidden.name='child_ids[]';
+                hidden.value= String(it.id);
+                chip.appendChild(hidden);
+                // reset UI
+                input.value=''; results.style.display='none'; results.innerHTML='';
+            }
+
+            let timer=null;
+            input.addEventListener('input', function(){
+                const q = this.value.trim();
+                if (timer) clearTimeout(timer);
+                if (q.length < 2){ results.style.display='none'; results.innerHTML=''; return; }
+                timer = setTimeout(async ()=>{
+                    try{
+                        const res = await fetch(`{{ path('admin_children_search') }}?q=${encodeURIComponent(q)}`, { credentials:'same-origin' });
+                        if (!res.ok) throw new Error('HTTP '+res.status);
+                        const data = await res.json();
+                        renderResults(data.items || []);
+                    }catch(e){ console.error(e); }
+                }, 200);
+            });
+
+            // fermer la liste si clic ailleurs
+            document.addEventListener('click', (e)=>{
+                if (!results.contains(e.target) && e.target !== input){
+                    results.style.display='none';
+                }
+            });
+        })();
+    </script>
+{% endblock %}

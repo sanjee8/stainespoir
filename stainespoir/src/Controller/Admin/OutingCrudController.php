@@ -45,9 +45,16 @@ final class OutingCrudController extends AbstractCrudController
                 return sprintf('/admin?crudAction=index&crudControllerFqcn=%s&filters[outing]=%d', $fqcn, $o->getId());
             });
 
+
+        $invite = Action::new('invite', 'Inviter', 'fa fa-paper-plane')
+            ->linkToRoute('admin_outing_invite', fn(\App\Entity\Outing $o) => ['id' => $o->getId()]);
+
+
         return $actions
             ->add(Crud::PAGE_INDEX, $registrations)
-            ->add(Crud::PAGE_DETAIL, $registrations);
+            ->add(Crud::PAGE_DETAIL, $registrations)
+            ->add(Crud::PAGE_INDEX, $invite)
+            ->add(Crud::PAGE_DETAIL, $invite);
         // NE PAS ré-ajouter NEW/EDIT/DETAIL ici : ils existent déjà
     }
 
