@@ -3,6 +3,8 @@ namespace App\Controller\Admin;
 
 use App\Entity\User;
 use App\Entity\Child;
+use App\Entity\Attendance;
+use App\Entity\Message;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -10,20 +12,36 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Entity\Attendance;
 use DateTimeImmutable;
 use DateTimeZone;
-use App\Repository\OutingRegistrationRepository;
-use App\Service\PdfGenerator;
-use App\Entity\Outing;
-use App\Entity\OutingRegistration;
+
 class DashboardController extends AbstractDashboardController
 {
     public function __construct(private EntityManagerInterface $em) {}
+
     #[Route('/admin', name: 'admin')]
     public function index(): Response
     {
-        return $this->render('admin/dashboard.html.twig');
+        // Derniers messages "non répondus" :
+        // Pour chaque enfant, on prend le DERNIER message ; s’il vient d’un parent, on le considère à répondre.
+        // (Ainsi, si le staff a répondu après, cet enfant ne sortira pas.)
+        $unrepliedMessages = $this->em->createQuery(
+            'SELECT m, c
+             FROM App\Entity\Message m
+             JOIN m.child c
+             WHERE m.createdAt = (
+               SELECT MAX(m2.createdAt) FROM App\Entity\Message m2 WHERE m2.child = c
+             )
+             AND m.sender = :parent
+             ORDER BY m.createdAt DESC'
+        )
+            ->setParameter('parent', 'parent')
+            ->setMaxResults(15)
+            ->getResult();
+
+        return $this->render('admin/dashboard.html.twig', [
+            'unrepliedMessages' => $unrepliedMessages,
+        ]);
     }
 
     /**
@@ -204,14 +222,6 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('Présences');
         yield MenuItem::linkToRoute('Fiche du jour', 'fa fa-calendar-check', 'admin_presences');
 
-        yield MenuItem::section('Sorties');
-        yield MenuItem::linkToCrud('Sorties', 'fa fa-route', Outing::class)
-            ->setController(OutingCrudController::class);
-
-        yield MenuItem::linkToCrud('Inscriptions', 'fa fa-ticket', OutingRegistration::class)
-            ->setController(OutingRegistrationCrudController::class);
-
-
         yield MenuItem::section('Parents');
 
         // 🔴 Compteur des parents en attente
@@ -236,25 +246,4 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Tous les enfants', 'fa fa-child', Child::class)
             ->setController(ChildCrudController::class);
     }
-
-    #[Route('/admin/sorties/inscriptions/{id}/attestation.pdf', name: 'admin_outing_pdf', methods: ['GET'])]
-    public function adminOutingPdf(
-        int $id,
-        OutingRegistrationRepository $regs,
-        PdfGenerator $pdf
-    ): Response {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-        $reg = $regs->find($id);
-        if (!$reg) { throw $this->createNotFoundException('Inscription introuvable.'); }
-        if (!$reg->getSignedAt()) {
-            $this->addFlash('error','Aucune signature enregistrée pour cette inscription.');
-            return $this->redirectToRoute('admin');
-        }
-        $bin = $pdf->render('pdf/outing_attestation.html.twig', ['reg'=>$reg]);
-        return new Response($bin, 200, [
-            'Content-Type'=>'application/pdf',
-            'Content-Disposition'=>'attachment; filename="attestation-sortie-'.$reg->getId().'.pdf"',
-        ]);
-    }
-
 }

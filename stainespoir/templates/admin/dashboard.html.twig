@@ -1,5 +1,56 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
-{% block content %}
-    <h1>Dashboard</h1>
-    <p class="text-muted">Page d’accueil admin (stats à venir).</p>
+
+{% block content_title %}Tableau de bord{% endblock %}
+
+{% block main %}
+    <style>
+        .grid{display:grid;grid-template-columns:1fr;gap:16px}
+        .card{border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+        .card>.head{padding:12px 14px;border-bottom:1px solid #f0f0f0;font-weight:700}
+        .card>.body{padding:12px 14px}
+        .msg-list{display:flex;flex-direction:column;gap:10px}
+        .msg{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:start;border:1px solid #eee;border-radius:10px;padding:10px 12px;background:#fafafa}
+        .msg .from{font-weight:600}
+        .msg .meta{color:#6b7280;font-size:.9em}
+        .msg .body{grid-column:1 / -1;white-space:pre-wrap}
+        .muted{color:#6b7280}
+        .pill{display:inline-block;padding:2px 8px;border:1px solid #e5e7eb;border-radius:999px;background:#f9fafb;font-size:.85em}
+        .actions a{margin-left:8px}
+    </style>
+
+    <div class="grid">
+        <section class="card">
+            <div class="head">📬 Derniers messages parents à répondre</div>
+            <div class="body">
+                {% if unrepliedMessages is empty %}
+                    <p class="muted">Rien à traiter pour le moment 🎉</p>
+                {% else %}
+                    <div class="msg-list">
+                        {% for m in unrepliedMessages %}
+                            <div class="msg">
+                                <div class="from">
+                                    {{ m.child.firstName }} {{ m.child.lastName }}
+                                    {% if m.child.level %}<span class="pill">{{ m.child.level }}</span>{% endif %}
+                                </div>
+                                <div class="meta">
+                                    {{ m.createdAt|date('d/m/Y H:i') }}
+                                </div>
+                                <div class="body">{{ m.body }}</div>
+                                <div class="actions" style="grid-column:1 / -1; text-align:right">
+                                    {# Liens utiles : détail de l'enfant et (si tu as) la vue des messages #}
+                                    <a class="btn btn-sm" href="{{ path('admin', {
+                                        crudAction: 'detail',
+                                        crudControllerFqcn: 'App\\\\Controller\\\\Admin\\\\ChildCrudController',
+                                        entityId: m.child.id
+                                    }) }}">Voir l’enfant</a>
+
+                                    {# Si tu ajoutes une page Admin “Messages” plus tard, on pourra lier ici #}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
 {% endblock %}

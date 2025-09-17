@@ -29,7 +29,15 @@
 </div>
 
 <p>Je soussigné(e) <b>{{ reg.signatureName }}</b>, représentant(e) légal(e) de l’enfant ci-dessus, autorise sa participation à la sortie indiquée. J’ai pris connaissance des informations pratiques et des risques usuels liés à l’activité. Cette signature électronique vaut signature manuscrite.</p>
-
+<p>
+    - Je comprends que cette sortie sera encadrée par des bénévoles de l’association Stains Espoir.<br />
+    - J’autorise les responsables à prendre les mesures nécessaires en cas d’urgence médicale.<br />
+    - Je reconnais que mon enfant est couvert par une assurance responsabilité civile et une assurance maladie personnelles.<br />
+    - Je m’engage à rappeler à mon enfant qu’il doit respecter les consignes de sécurité données par les responsables et les encadrants.<br />
+    - J’assume la responsabilité des dommages que mon enfant pourrait causer ou subir pendant la sortie.<br />
+    <br/>
+    L’association Stains Espoir et ses bénévoles, agissant à titre gratuit, ne pourront être tenus responsables en cas d’accident ou de blessure, sauf en cas de faute lourde ou intentionnelle de leur part.
+</p>
 <div class="row">
     <div class="box" style="flex:1">
         <b>Horodatage de la signature :</b> {{ reg.signedAt ? reg.signedAt|date('d/m/Y H:i:s') ~ ' (Europe/Paris)' : '—' }}<br>
