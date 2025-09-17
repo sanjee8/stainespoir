@@ -1,0 +1,7 @@
+{% if field.value %}
+    <div>
+        <img src="{{ field.value }}" alt="Signature" style="max-width:320px;height:auto;border:1px solid #ddd;padding:4px;border-radius:6px">
+    </div>
+{% else %}
+    <span class="text-muted">Aucune signature manuscrite</span>
+{% endif %}

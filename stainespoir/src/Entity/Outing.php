@@ -37,4 +37,8 @@ class Outing
     public function setLocation(?string $l):self {$this->location=$l;return $this;}
     public function getDescription():?string {return $this->description;}
     public function setDescription(?string $d):self {$this->description=$d;return $this;}
+    public function __toString(): string
+    {
+        return $this->getTitle() ?: ('Sortie #'.$this->getId());
+    }
 }

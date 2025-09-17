@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #111; }
+        h1 { font-size: 18px; margin: 0 0 10px; }
+        .muted { color: #555; }
+        .box { border:1px solid #ddd; border-radius:6px; padding:10px; margin:8px 0; }
+        .row { display:flex; gap:12px; }
+        .sig { margin-top:20px; }
+        .sig-img{ border:1px solid #ddd; padding:4px; border-radius:6px; max-width:260px; height:auto; }
+        .sig-line{ border-top:1px solid #000; width:260px; margin-top:24px; }
+    </style>
+</head>
+<body>
+<h1>Attestation d'autorisation parentale</h1>
+<p class="muted">Document généré automatiquement — Stains Espoir</p>
+
+<div class="box">
+    <b>Sortie :</b> {{ reg.outing.title }}<br>
+    <b>Date/heure :</b> {{ reg.outing.startsAt|date('d/m/Y H:i') }}{% if reg.outing.location %} — <b>Lieu :</b> {{ reg.outing.location }}{% endif %}
+</div>
+
+<div class="box">
+    <b>Enfant :</b> {{ reg.child.firstName }} {{ reg.child.lastName }}<br>
+    <b>Représentant légal (signataire) :</b> {{ reg.signatureName }}{% if reg.signaturePhone %} — {{ reg.signaturePhone }}{% endif %}<br>
+    {% if reg.healthNotes %}<b>Infos santé/allergies :</b> {{ reg.healthNotes }}<br>{% endif %}
+</div>
+
+<p>Je soussigné(e) <b>{{ reg.signatureName }}</b>, représentant(e) légal(e) de l’enfant ci-dessus, autorise sa participation à la sortie indiquée. J’ai pris connaissance des informations pratiques et des risques usuels liés à l’activité. Cette signature électronique vaut signature manuscrite.</p>
+
+<div class="row">
+    <div class="box" style="flex:1">
+        <b>Horodatage de la signature :</b> {{ reg.signedAt ? reg.signedAt|date('d/m/Y H:i:s') ~ ' (Europe/Paris)' : '—' }}<br>
+        <b>IP lors de la signature :</b> {{ reg.signatureIp ?? '—' }}<br>
+        <b>Agent utilisateur :</b> {{ reg.signatureUserAgent ?? '—' }}
+    </div>
+</div>
+
+<div class="sig">
+    {% if reg.signatureImage %}
+        <img class="sig-img" src="{{ reg.signatureImage }}" alt="Signature manuscrite">
+    {% else %}
+        <div style="font-family:'Brush Script MT', cursive; font-size:28px">{{ reg.signatureName }}</div>
+        <div class="sig-line"></div>
+    {% endif %}
+    <div class="muted">Signature du représentant légal</div>
+</div>
+
+<p class="muted" style="margin-top:12px">Note probatoire : nom du signataire, horodatage, IP & agent utilisateur sont conservés. Pour un niveau eIDAS supérieur, recourir à un prestataire qualifié.</p>
+</body>
+</html>

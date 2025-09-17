@@ -23,7 +23,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     --muted:#5A5F68;
     --line:rgba(0,0,0,.12);
     --focus:#6A1B9A;
-    --hero-img: url('https://stains-espoir.fr/wp-content/uploads/2017/05/banner.jpg'); /* Remplacez par l’URL de votre photo */
+    --hero-img: url('https://stains-espoir.fr/wp-content/uploads/2017/05/banner.jpg');
 
     --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans";
     --size-0:.9rem;

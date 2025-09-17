@@ -34,6 +34,24 @@ class OutingRegistration
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $healthNotes = null;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $signatureIp = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $signatureUserAgent = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $signatureImage = null;
+
+    
+
+    public function getSignatureIp(): ?string { return $this->signatureIp; }
+    public function setSignatureIp(?string $v): self { $this->signatureIp=$v; return $this; }
+    public function getSignatureUserAgent(): ?string { return $this->signatureUserAgent; }
+    public function setSignatureUserAgent(?string $v): self { $this->signatureUserAgent=$v; return $this; }
+    public function getSignatureImage(): ?string { return $this->signatureImage; }
+    public function setSignatureImage(?string $v): self { $this->signatureImage=$v; return $this; }
+
 
     public function getSignedAt(): ?\DateTimeImmutable { return $this->signedAt; }
     public function setSignedAt(?\DateTimeImmutable $dt): self { $this->signedAt = $dt; return $this; }

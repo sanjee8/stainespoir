@@ -81,4 +81,9 @@ class Child
 
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $v): self { $this->notes = $v; return $this; }
+
+    public function __toString(): string
+    {
+        return trim(($this->getFirstName() ?? '').' '.($this->getLastName() ?? '')) ?: ('Enfant #'.$this->getId());
+    }
 }

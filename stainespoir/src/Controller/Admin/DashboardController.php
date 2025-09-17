@@ -13,7 +13,10 @@ use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Attendance;
 use DateTimeImmutable;
 use DateTimeZone;
-
+use App\Repository\OutingRegistrationRepository;
+use App\Service\PdfGenerator;
+use App\Entity\Outing;
+use App\Entity\OutingRegistration;
 class DashboardController extends AbstractDashboardController
 {
     public function __construct(private EntityManagerInterface $em) {}
@@ -201,6 +204,13 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('Présences');
         yield MenuItem::linkToRoute('Fiche du jour', 'fa fa-calendar-check', 'admin_presences');
 
+        yield MenuItem::section('Sorties');
+        yield MenuItem::linkToCrud('Sorties', 'fa fa-route', Outing::class)
+            ->setController(OutingCrudController::class);
+
+        yield MenuItem::linkToCrud('Inscriptions', 'fa fa-ticket', OutingRegistration::class)
+            ->setController(OutingRegistrationCrudController::class);
+
 
         yield MenuItem::section('Parents');
 
@@ -226,4 +236,25 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Tous les enfants', 'fa fa-child', Child::class)
             ->setController(ChildCrudController::class);
     }
+
+    #[Route('/admin/sorties/inscriptions/{id}/attestation.pdf', name: 'admin_outing_pdf', methods: ['GET'])]
+    public function adminOutingPdf(
+        int $id,
+        OutingRegistrationRepository $regs,
+        PdfGenerator $pdf
+    ): Response {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $reg = $regs->find($id);
+        if (!$reg) { throw $this->createNotFoundException('Inscription introuvable.'); }
+        if (!$reg->getSignedAt()) {
+            $this->addFlash('error','Aucune signature enregistrée pour cette inscription.');
+            return $this->redirectToRoute('admin');
+        }
+        $bin = $pdf->render('pdf/outing_attestation.html.twig', ['reg'=>$reg]);
+        return new Response($bin, 200, [
+            'Content-Type'=>'application/pdf',
+            'Content-Disposition'=>'attachment; filename="attestation-sortie-'.$reg->getId().'.pdf"',
+        ]);
+    }
+
 }

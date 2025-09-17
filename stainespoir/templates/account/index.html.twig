@@ -249,6 +249,7 @@
                                 <div class="out-actions">
                                     {% if signed %}
                                         <span class="badge ok">Signée</span>
+                                        <a class="btn" href="{{ path('app_account_outing_pdf', { id: r.id }) }}">Télécharger l’attestation</a>
                                     {% else %}
                                         <a class="btn ghost" href="{{ path('app_account_outing_sign_form', { id: r.id }) }}">Autoriser la sortie</a>
                                     {% endif %}

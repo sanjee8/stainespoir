@@ -18,6 +18,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Service\PdfGenerator;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 #[IsGranted('ROLE_PARENT')]
 final class AccountController extends AbstractController
@@ -303,6 +306,32 @@ final class AccountController extends AbstractController
         // Si tu as un booléen en base, ex. setLegalConsent(true) :
         // $reg->setLegalConsent(true);
 
+// Signature manuscrite (data URL)
+        $signatureData = (string) $req->request->get('signature', '');
+// (optionnel) la rendre obligatoire :
+// if ($signatureData === '') {
+//     $this->addFlash('error','Merci de signer dans la zone prévue.');
+//     return $this->redirectToRoute('app_account_outing_sign_form', ['id'=>$id], 303);
+// }
+
+// Enregistrer si la propriété existe (safe-guard)
+        if (method_exists($reg, 'setSignatureImage')) {
+            // On ne garde que les data URL PNG valides
+            if ($signatureData && str_starts_with($signatureData, 'data:image')) {
+                $reg->setSignatureImage($signatureData);
+            } else {
+                $reg->setSignatureImage(null);
+            }
+        }
+// (optionnel) empreintes techniques si tu les ajoutes en base
+        if (method_exists($reg, 'setSignatureIp')) {
+            $reg->setSignatureIp($req->getClientIp() ?: null);
+        }
+        if (method_exists($reg, 'setSignatureUserAgent')) {
+            $reg->setSignatureUserAgent($req->headers->get('User-Agent') ?: null);
+        }
+
+
         $em->flush();
 
         $this->addFlash('success','Autorisation enregistrée.');
@@ -486,4 +515,49 @@ final class AccountController extends AbstractController
         ]);
     }
 
+
+
+
+    #[Route('/mon-compte/sorties/{id}/attestation.pdf', name: 'app_account_outing_pdf', methods: ['GET'])]
+    public function outingPdf(
+        int $id,
+        OutingRegistrationRepository $regs,
+        PdfGenerator $pdf
+    ): Response {
+        /** @var \App\Entity\User $user */
+        $user = $this->getUser();
+
+        $reg = $regs->find($id);
+        if (!$reg || $reg->getChild()->getParent() !== $user->getProfile()) {
+            throw $this->createNotFoundException('Inscription introuvable.');
+        }
+        if (!$reg->getSignedAt()) {
+            $this->addFlash('error','Aucune signature enregistrée pour cette inscription.');
+            return $this->redirectToRoute('app_account', [
+                'enfant' => $reg->getChild()->getId(),
+                'tab'    => 'sorties'
+            ], 303);
+        }
+
+        $binary = $pdf->render('pdf/outing_attestation.html.twig', ['reg' => $reg]);
+
+        if (!$binary || strlen($binary) < 100) {
+            if ($this->getParameter('kernel.debug')) {
+                return new Response(
+                    "Le PDF généré est vide (".strlen((string)$binary)." octets).\n".
+                    "Vérifie le template pdf/outing_attestation.html.twig et le service PdfGenerator.",
+                    500,
+                    ['Content-Type' => 'text/plain; charset=UTF-8']
+                );
+            }
+            throw $this->createNotFoundException('PDF non disponible.');
+        }
+
+        $tmp = tempnam(sys_get_temp_dir(), 'pdf_');
+        file_put_contents($tmp, $binary);
+
+        $filename = 'attestation-sortie-'.$reg->getId().'.pdf';
+        return $this->file($tmp, $filename, ResponseHeaderBag::DISPOSITION_ATTACHMENT)
+            ->deleteFileAfterSend(true);
+    }
 }

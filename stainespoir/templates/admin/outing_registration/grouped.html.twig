@@ -1,0 +1,178 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Inscriptions — Vue par sortie{% endblock %}
+
+{% block main %}
+    {# === BASE PARAMS pour rester sur la page groupedView === #}
+    {% set base = {
+        'crudAction': 'groupedView',
+        'crudControllerFqcn': ctrlFqcn
+    } %}
+    {# === PARAMS courants (filtres + base) === #}
+    {% set params = base|merge({
+        'q': q,
+        'status': statuses,
+        'from': from,
+        'to': to,
+        'future': future ? 1 : null,
+        'per': per,
+        'limit': limit,
+        'page': page
+    }) %}
+
+    <style>
+        .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px}
+        .toolbar .f{display:flex;flex-direction:column;gap:4px}
+        .toolbar input, .toolbar select{padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px}
+        .btnx{padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none}
+        .out-card{border:1px solid #e5e7eb;border-radius:12px;margin-bottom:16px;overflow:hidden;background:#fff}
+        .out-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f9fafb;cursor:pointer}
+        .title{font-weight:700}
+        .sub{color:#6b7280;font-size:.95em}
+        .counts{display:flex;gap:10px;color:#6b7280;font-size:.9em}
+        .counts b{color:#111}
+        .body{display:none}
+        .body.open{display:block}
+        .list{width:100%;border-collapse:collapse}
+        .list th,.list td{padding:8px;border-top:1px solid #f0f0f0}
+        .tag{font-size:.8em;border-radius:999px;padding:3px 8px;border:1px solid}
+        .invited{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+        .confirmed,.attended{background:#e8f8ee;border-color:#b8e6c9;color:#0a7a43}
+        .declined,.absent{background:#feecec;border-color:#f3b4b0;color:#b42318}
+        .actions{display:flex;gap:6px}
+        .more{padding:10px;text-align:center;border-top:1px dashed #eee}
+        .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+    </style>
+
+    {# ——— Barre de filtres ——— #}
+    <form class="toolbar" method="get" action="{{ path('admin') }}">
+        {# on fixe l'action/page EasyAdmin #}
+        <input type="hidden" name="crudAction" value="groupedView">
+        <input type="hidden" name="crudControllerFqcn" value="{{ ctrlFqcn }}">
+
+        <div class="f">
+            <label>Recherche</label>
+            <input type="text" name="q" value="{{ q }}" placeholder="Titre sortie ou enfant">
+        </div>
+        <div class="f">
+            <label>Statuts</label>
+            <select name="status[]" multiple size="5" style="min-width:160px">
+                {% set opts = {'invited':'Invitée','confirmed':'Signée','declined':'Refusée','attended':'Présent','absent':'Absent'} %}
+                {% for k, v in opts %}
+                    <option value="{{ k }}" {{ k in statuses ? 'selected' }}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="f">
+            <label>De</label>
+            <input type="date" name="from" value="{{ from }}">
+        </div>
+        <div class="f">
+            <label>À</label>
+            <input type="date" name="to" value="{{ to }}">
+        </div>
+        <div class="f">
+            <label>&nbsp;</label>
+            <label style="display:flex;gap:6px;align-items:center">
+                <input type="checkbox" name="future" value="1" {{ future ? 'checked' }}> Futur uniquement
+            </label>
+        </div>
+        <div class="f">
+            <label>Sorties/page</label>
+            <input type="number" name="per" value="{{ per }}" min="1" max="20" style="width:90px">
+        </div>
+        <div class="f">
+            <label>Inscriptions/sortie</label>
+            <input type="number" name="limit" value="{{ limit }}" min="5" max="200" style="width:120px">
+        </div>
+        <div class="f">
+            <label>&nbsp;</label>
+            <button class="btnx" type="submit">Appliquer</button>
+            <a class="btnx" href="{{ path('admin', base) }}">Réinitialiser</a>
+        </div>
+
+        <div class="f" style="margin-left:auto">
+            <label>&nbsp;</label>
+            <a class="btnx" href="{{ path('admin', params|merge({'crudAction':'groupedExportCsv'})) }}">Exporter CSV</a>
+        </div>
+    </form>
+
+    {# ——— Liste groupée ——— #}
+    {% for oid, g in groups %}
+        {% set o = g.outing %}
+        <section class="out-card" data-oid="{{ oid }}">
+            <div class="out-head" onclick="this.nextElementSibling.classList.toggle('open')">
+                <div>
+                    <div class="title">{{ o.title }}</div>
+                    <div class="sub">{{ o.startsAt|date('d/m/Y H:i') }}{% if o.location %} · {{ o.location }}{% endif %}</div>
+                </div>
+                <div class="counts">
+                    <div>Invités: <b>{{ g.counts.invited }}</b></div>
+                    <div>Signées: <b>{{ g.counts.confirmed }}</b></div>
+                    <div>Refusées: <b>{{ g.counts.declined }}</b></div>
+                    <div>Présents: <b>{{ g.counts.attended }}</b></div>
+                    <div>Absents: <b>{{ g.counts.absent }}</b></div>
+                    <div>Total: <b>{{ g.total }}</b></div>
+                </div>
+            </div>
+
+            <div class="body {{ expandId==oid ? 'open' : '' }}">
+                <table class="list">
+                    <thead>
+                    <tr>
+                        <th>Enfant</th>
+                        <th>Statut</th>
+                        <th>Signé le</th>
+                        <th>Signataire</th>
+                        <th style="width:1%">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in g.regs %}
+                        <tr>
+                            <td>{{ r.child.firstName }} {{ r.child.lastName }}</td>
+                            <td><span class="tag {{ r.status }}">{{ r.status }}</span></td>
+                            <td>{{ r.signedAt ? r.signedAt|date('d/m/Y H:i') : '—' }}</td>
+                            <td>{{ r.signatureName ?? '—' }}</td>
+                            <td class="actions">
+                                {% if r.signedAt %}
+                                    <a class="btnx" href="{{ path('admin_outing_pdf', { id: r.id }) }}" title="PDF">PDF</a>
+                                {% endif %}
+                                <a class="btnx" href="{{ path('admin', base|merge({'crudAction':'detail','entityId': r.id})) }}">Ouvrir</a>
+                                {% if r.status != 'attended' %}
+                                    <a class="btnx" href="{{ path('admin', base|merge({'crudAction':'markAttended','entityId': r.id})) }}">Présent</a>
+                                {% endif %}
+                                {% if r.status != 'absent' %}
+                                    <a class="btnx" href="{{ path('admin', base|merge({'crudAction':'markAbsent','entityId': r.id})) }}">Absent</a>
+                                {% endif %}
+                                {% if r.status != 'declined' %}
+                                    <a class="btnx" href="{{ path('admin', base|merge({'crudAction':'markDeclined','entityId': r.id})) }}">Refusée</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if g.has_more %}
+                    <div class="more">
+                        <a class="btnx" href="{{ path('admin', params|merge({'expand': oid})) }}">Voir toutes les inscriptions ({{ g.total }})</a>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% else %}
+        <p class="text-muted">Aucune inscription.</p>
+    {% endfor %}
+
+    {% if pages > 1 %}
+        <div class="pager">
+            <span>Page {{ page }}/{{ pages }}</span>
+            {% if page > 1 %}
+                <a class="btnx" href="{{ path('admin', params|merge({'page': page-1})) }}">← Précédent</a>
+            {% endif %}
+            {% if page < pages %}
+                <a class="btnx" href="{{ path('admin', params|merge({'page': page+1})) }}">Suivant →</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}
