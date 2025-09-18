@@ -1,0 +1,284 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Tous les enfants — Vue par niveau{% endblock %}
+
+{% block main %}
+    <style>
+        :root{
+            --ea-primary:#6A1B9A;
+            --bd:#e5e7eb;
+            --bd-soft:#f1f5f9;
+            --txt-muted:#6b7280;
+            --card-bg:#fff;
+            --chip-bg:#fafafa;
+            --radius:12px;
+        }
+
+        /* --- Barre outils compacte -------------------------------------------- */
+        .toolbar-card{
+            background:var(--card-bg);
+            border:1px solid var(--bd);
+            border-radius:var(--radius);
+            padding:10px 12px;
+            margin-bottom:12px;
+            box-shadow:0 1px 0 rgba(17,24,39,.03);
+        }
+        .toolbar{
+            display:grid;
+            grid-template-columns: minmax(240px, 1fr) 1fr auto;
+            gap:10px;
+            align-items:center;
+        }
+        @media (max-width:1100px){
+            .toolbar{ grid-template-columns: 1fr; }
+        }
+
+        .muted{ color:var(--txt-muted); font-size:.9rem; }
+        .input{
+            width:100%; height:34px; padding:0 10px; border:1px solid var(--bd);
+            border-radius:10px; background:#fff;
+        }
+
+        .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+        .chip{
+            display:inline-flex; align-items:center; gap:6px;
+            padding:5px 8px; border:1px solid var(--bd); border-radius:999px;
+            background:var(--chip-bg); user-select:none; cursor:pointer; line-height:1;
+            font-size:.92rem;
+        }
+        .chip input{ margin:0; }
+
+        .btn{
+            appearance:none; border-radius:10px; border:1px solid var(--bd);
+            padding:8px 12px; cursor:pointer; line-height:1;
+            background:#fff; color:#111; font-weight:600; text-decoration:none; display:inline-block;
+        }
+        .btn-primary{ background:var(--ea-primary); border-color:var(--ea-primary); color:#fff; }
+        .btn-ghost{ background:#fff; color:var(--ea-primary); border-color:var(--ea-primary); }
+        .btn-outline{ background:#fff; }
+        .btn-xs{ padding:6px 9px; font-size:.9rem; border-radius:8px; }
+        .btn:focus{ outline:2px solid rgba(106,27,154,.25); outline-offset:2px; }
+
+        .actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+
+        /* --- Panneau avancé (repliable) --------------------------------------- */
+        details.filters-adv{ margin-bottom:12px; }
+        details.filters-adv > summary{
+            list-style:none; cursor:pointer; user-select:none;
+            display:inline-flex; gap:8px; align-items:center;
+            padding:6px 10px; border:1px dashed var(--bd); border-radius:10px;
+            color:var(--ea-primary); background:#fff;
+        }
+        details.filters-adv[open] > summary{
+            background:#f9f5ff; border-style:solid;
+        }
+        details.filters-adv .content{
+            margin-top:10px; padding:10px 12px; border:1px solid var(--bd);
+            border-radius:12px; background:#fff;
+        }
+
+        .toggles{ display:flex; flex-wrap:wrap; gap:8px; }
+        .toggle{
+            display:inline-flex; align-items:center; gap:8px;
+            padding:6px 10px; border:1px solid var(--bd); border-radius:999px; background:#fff;
+            font-size:.92rem;
+        }
+
+        /* --- Cartes groupes ---------------------------------------------------- */
+        .cards{ display:grid; grid-template-columns:1fr; gap:12px; }
+        .card{
+            border:1px solid var(--bd); border-radius:var(--radius); background:#fff;
+            box-shadow:0 1px 0 rgba(17,24,39,.03);
+        }
+        .card .head{
+            padding:10px 12px; border-bottom:1px solid var(--bd-soft);
+            display:flex; justify-content:space-between; align-items:center; gap:8px;
+        }
+        .pill{
+            display:inline-block; padding:3px 8px;
+            border:1px solid var(--bd); border-radius:999px; background:#f9fafb; font-size:.83rem;
+        }
+        .card .head .right{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .card .body{ padding:10px 12px; }
+        table{ width:100%; border-collapse:collapse; }
+        th,td{ padding:8px 10px; border-bottom:1px solid var(--bd-soft); text-align:left; vertical-align:middle; }
+        th.actions-col, td.actions-col{ width:1%; white-space:nowrap; text-align:right; }
+        .right{text-align:right}
+
+        /* --- Pagination -------------------------------------------------------- */
+        .pagination{ display:flex; gap:6px; justify-content:center; margin-top:10px; }
+        .pagination a, .pagination span{
+            padding:6px 10px; border:1px solid var(--bd); border-radius:8px; text-decoration:none;
+            background:#fff; color:#111;
+        }
+        .pagination .current{ background:var(--ea-primary); color:#fff; border-color:var(--ea-primary); }
+    </style>
+
+    {# URL de base conservant crudControllerFqcn + action #}
+    {% set baseParams = app.request.query.all|merge({'crudControllerFqcn': app.request.get('crudControllerFqcn'), 'crudAction': 'groupedView'}) %}
+    {% set baseUrl = path(app.request.attributes.get('_route'), baseParams) %}
+
+    <form method="get" action="{{ baseUrl }}">
+        <input type="hidden" name="crudControllerFqcn" value="{{ app.request.get('crudControllerFqcn') }}">
+        <input type="hidden" name="crudAction" value="groupedView">
+
+        {# ─── Barre compacte #}
+        <div class="toolbar-card">
+            <div class="toolbar">
+                <div>
+                    <input class="input" type="text" name="q" value="{{ q }}" placeholder="Recherche : prénom ou nom…">
+                </div>
+
+                <div class="chips">
+                    {% for lv in levels_all %}
+                        <label class="chip">
+                            <input type="checkbox" name="levels[]" value="{{ lv }}" {% if lv in levels %}checked{% endif %}>
+                            <span>{{ lv }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">Appliquer</button>
+                    <a class="btn btn-outline" href="{{ path(app.request.attributes.get('_route'), {'crudControllerFqcn': app.request.get('crudControllerFqcn'), 'crudAction':'groupedView'}) }}">Réinitialiser</a>
+                    <a class="btn btn-ghost" href="{{ path(app.request.attributes.get('_route'), app.request.query.all|merge({'crudControllerFqcn': app.request.get('crudControllerFqcn'), 'crudAction':'exportCsv'})) }}">Exporter CSV</a>
+                </div>
+            </div>
+        </div>
+
+        {# ─── Filtres avancés repliés : établissement, validé, retour seul, max #}
+        <details class="filters-adv">
+            <summary>Plus de filtres</summary>
+            <div class="content">
+                <div class="toggles" style="margin-bottom:8px">
+                    <label class="toggle">
+                        <span class="muted">Établissement</span>
+                        <input class="input" type="text" name="school" value="{{ school }}" placeholder="ex : Joliot-Curie" style="width:220px">
+                    </label>
+                    <label class="toggle">
+                        <input type="checkbox" name="approved" value="1" {% if approved == '1' %}checked{% endif %}>
+                        <span class="muted">Validés</span>
+                    </label>
+                    <label class="toggle">
+                        <input type="checkbox" name="approved" value="0" {% if approved == '0' %}checked{% endif %}>
+                        <span class="muted">Non validés</span>
+                    </label>
+                    <label class="toggle">
+                        <input type="checkbox" name="alone" value="1" {% if alone == '1' %}checked{% endif %}>
+                        <span class="muted">Retour seul autorisé</span>
+                    </label>
+                    <label class="toggle">
+                        <input type="checkbox" name="alone" value="0" {% if alone == '0' %}checked{% endif %}>
+                        <span class="muted">Retour seul non autorisé</span>
+                    </label>
+                    <label class="toggle">
+                        <span class="muted">Max/en groupe</span>
+                        <input class="input" type="number" name="per" value="{{ per }}" min="10" max="200" style="width:90px">
+                    </label>
+                </div>
+                <div class="muted">Astuce : ces filtres restent actifs même repliés.</div>
+            </div>
+        </details>
+    </form>
+
+    {% if totalGroups == 0 %}
+        <p class="muted">Aucun enfant trouvé avec ces filtres.</p>
+    {% else %}
+        <div class="cards">
+            {% for level, g in groups %}
+                <article class="card">
+                    <div class="head">
+                        <div>
+                            <b>{{ level }}</b>
+                            <span class="pill">Total : {{ g.counts.total }}</span>
+                            <span class="pill">Validés : {{ g.counts.approved }}</span>
+                            <span class="pill">Retour seul : {{ g.counts.alone }}</span>
+                        </div>
+                        <div class="right">
+                            {# Exporter ce niveau uniquement (garde les filtres + force levels[]=level) #}
+                            {% set exportLevelUrl = path(
+                                app.request.attributes.get('_route'),
+                                app.request.query.all
+                                |merge({'crudControllerFqcn': app.request.get('crudControllerFqcn'), 'crudAction':'exportCsv'})
+                                |merge({'levels[]': [level]})
+                            ) %}
+                            <a class="btn btn-ghost btn-xs" href="{{ exportLevelUrl }}">Exporter ce niveau</a>
+
+                            {# Lien pour “déplier complètement” ce niveau #}
+                            {% set moreUrl = path(app.request.attributes.get('_route'),
+                                app.request.query.all|merge({
+                                    'crudControllerFqcn': app.request.get('crudControllerFqcn'),
+                                    'crudAction': 'groupedView',
+                                    'expand': level
+                                })
+                            ) %}
+                            {% if g.has_more %}
+                                <a class="btn btn-outline btn-xs" href="{{ moreUrl }}">Voir tous</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="body">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Prénom</th>
+                                <th>Nom</th>
+                                <th>Établissement</th>
+                                <th>Parent</th>
+                                <th>Email parent</th>
+                                <th>Validé</th>
+                                <th>Retour seul</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for c in g.children %}
+                                {% set parentId = c.parent and c.parent.user ? c.parent.user.id : null %}
+                                {% set editUrl = ea_url().setController(app.request.get('crudControllerFqcn')).setAction('edit').setEntityId(c.id) %}
+                                <tr>
+                                    <td>{{ c.firstName }}</td>
+                                    <td>{{ c.lastName }}</td>
+                                    <td>{{ c.school ?? '—' }}</td>
+                                    <td>
+                                        {% set parentName = (c.parent ? (c.parent.firstName ~ ' ' ~ c.parent.lastName) : '—') %}
+                                        {{ parentName|trim|default('—') }}
+                                    </td>
+                                    <td>{{ c.parent and c.parent.user ? c.parent.user.email : '—' }}</td>
+                                    <td>{{ c.isApproved ? 'Oui' : 'Non' }}</td>
+                                    <td>{{ c.canLeaveAlone ? 'Oui' : 'Non' }}</td>
+                                    <td class="actions-col">
+                                        <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+                                            {% if parentId %}
+                                                <a class="btn btn-ghost btn-xs" href="/admin/parent-validated/{{ parentId }}">Parent</a>
+                                            {% endif %}
+                                            <a class="btn btn-outline btn-xs" href="{{ editUrl }}">Éditer</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        {% if pages > 1 %}
+            <div class="pagination">
+                {% for p in 1..pages %}
+                    {% set pUrl = path(app.request.attributes.get('_route'),
+                        app.request.query.all|merge({
+                            'crudControllerFqcn': app.request.get('crudControllerFqcn'),
+                            'crudAction': 'groupedView',
+                            'page': p
+                        })
+                    ) %}
+                    {% if p == page %}
+                        <span class="current">{{ p }}</span>
+                    {% else %}
+                        <a href="{{ pUrl }}">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}

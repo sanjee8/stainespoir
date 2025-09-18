@@ -57,7 +57,7 @@ final class AccountController extends AbstractController
 
         // ----- Onglet -----
         $tab = (string) $req->query->get('tab', 'overview');
-        $tab = in_array($tab, ['overview','presences','sorties','messages','settings'], true) ? $tab : 'overview';
+        $tab = in_array($tab, ['overview','presences','sorties','messages','settings','assurance'], true) ? $tab : 'overview';
 
         // ----- Année scolaire sélectionnée -----
         $askedYear = $req->query->getInt('annee', $this->defaultSchoolStartYear());

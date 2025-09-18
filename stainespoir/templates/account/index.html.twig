@@ -50,6 +50,52 @@
             border:1px solid #f3b4b0; padding:8px 10px; border-radius:8px; font-size:.9em; display:none;
         }
         .cal-toast.show{ display:block; }
+
+        /* --- Assurance (onglet) --- */
+        .assu-grid{ display:grid; grid-template-columns:1fr; gap:18px; }
+        .assu-child{ padding:18px; border:1px solid #eee; border-radius:14px; box-shadow:0 10px 30px rgba(20,20,43,.06); }
+        .assu-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+        .assu-pill{ display:inline-block; background:#f5ecff; color:#6A1B9A; padding:.35rem .7rem; border-radius:999px; font-weight:600; }
+        .assu-two{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+        @media (max-width:780px){ .assu-two{ grid-template-columns:1fr } }
+        .assu-box{ border:1px dashed #ddd; border-radius:12px; padding:14px; }
+        .assu-box h3{ margin:0 0 6px; font-size:16px; }
+        .assu-cta{ display:flex; gap:10px; flex-wrap:wrap; }
+
+        .btn.purple{ background:#6A1B9A; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+        .btn.ghost{ background:#f3f4f6; color:#111827; border:1px solid #e5e7eb; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+
+        /* Cards et layout */
+        .card{background:#fff;border:1px solid #eee;border-radius:14px;box-shadow:0 10px 30px rgba(20,20,43,.06);padding:18px}
+        .pill{display:inline-block;background:#f5ecff;color:#6A1B9A;padding:.35rem .7rem;border-radius:999px;font-weight:600}
+        .lead{color:#4b5563}
+        .mb-3{margin-bottom:1rem}
+        .subcard{border:1px dashed #ddd;border-radius:12px;padding:16px}
+
+        /* Boutons */
+        .btn.purple{ background:#6A1B9A; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+        .btn.ghost{ background:#f8f9fb; color:#111827; border:1px solid #e5e7eb; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+        .btn.purple:disabled{opacity:.6;cursor:not-allowed}
+
+        /* Dropzone */
+        .dz{ border-radius:12px; background:#fbfbff; }
+        .dz-area{
+            display:flex; align-items:center; gap:12px; padding:12px;
+            border:2px dashed #d8c7ee; border-radius:12px; background:#f7f3ff;
+            cursor:pointer; transition:.2s;
+        }
+        .dz-area:hover{ background:#f3ecff }
+        .dz-area.is-dragover{ background:#ede4ff; border-color:#6A1B9A }
+        .dz-icon{ flex:0 0 40px; height:40px; display:grid; place-items:center; border-radius:10px; background:#6A1B9A; color:#fff; font-weight:700 }
+        .dz-title{ font-weight:700; margin:0; }
+        .dz-sub{ font-size:12px; color:#6b7280; margin-top:2px }
+        .dz-meta{ display:none; margin-top:8px; font-size:13px; color:#4b5563 }
+        .dz-meta.show{ display:block }
+        .dz-error{ display:none; margin-top:8px; font-size:13px; color:#b42318; background:#feecec; border:1px solid #f3b4b0; padding:6px 8px; border-radius:8px }
+        .dz-error.show{ display:block }
+        .dz-actions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap }
+        .link { border:none; background:none; color:#6A1B9A; font-weight:700; cursor:pointer; padding:0 }
+
     </style>
 {% endblock %}
 
@@ -105,6 +151,8 @@
                     <a class="{{ tab=='sorties'   ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'sorties'}) }}">Sorties</a>
                     <a class="{{ tab=='messages'  ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'messages'}) }}">Messages</a>
                     <a class="{{ tab=='settings'  ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'settings'}) }}">Paramètres</a>
+                    {# --- AJOUT : Onglet Assurance --- #}
+                    <a class="{{ tab=='assurance' ? 'active' }}" href="{{ path('app_account', {enfant: current.id, tab:'assurance'}) }}">Assurance</a>
                 </nav>
             </div>
         </section>
@@ -121,6 +169,9 @@
                                 <span class="badge ghost">{{ (data.presenceRate30 ?? 0) >= 50 ? 'Plutôt présent' : 'Plutôt absent' }}</span>
                             </p>
                             <p class="muted">Maison des associations — Stains</p>
+                            <div class="actions" style="margin-top:10px">
+                                <a class="btn ghost" href="{{ path('app_account', {enfant: current.id, tab:'assurance'}) }}">Gérer les assurances</a>
+                            </div>
                         </article>
 
                         <article class="card">
@@ -211,7 +262,6 @@
                                     </div>
                                 {% endfor %}
                             </div>
-
 
                             <div class="cal-loader" id="calLoader">
                                 <div class="spinner" aria-hidden="true"></div>
@@ -367,6 +417,68 @@
                     </div>
                 {% endif %}
 
+
+                {% if tab == 'assurance' %}
+
+                    {% if insurance_forms is defined and insurance_existing is defined and current_school_year is defined %}
+
+                        <h1>Assurances scolaires <small style="color:#667085;font-weight:500;">({{ current_year }})</small></h1>
+                        <p class="lead mb-3">Déposez pour chaque enfant : <strong>Responsabilité civile</strong>. Un administrateur validera ensuite.</p>
+
+
+                        <div class="assu-grid">
+                            {% for child in kids %}
+                                <article class="assu-child">
+                                    <div class="assu-head">
+                                        <div>
+                                            <span class="assu-pill">{{ child.firstName }} {{ child.lastName }}</span>
+                                            <div class="muted" style="font-size:13px;margin-top:4px">Année scolaire : {{ current_school_year }}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="assu-two">
+                                        {% for t in ['RC','HEALTH'] %}
+                                            <div class="assu-box">
+                                                <h3>{% if t=='RC' %}Responsabilité civile{% else %}Assurance maladie{% endif %}</h3>
+
+                                                {% set items = (insurance_existing[child.id] ?? [])|filter(i => i.type == t) %}
+                                                {% set currentIns = (items|filter(i => i.schoolYear == current_school_year)|first) %}
+                                                {% if currentIns %}
+                                                    {% set s = currentIns.status %}
+                                                    {% set label = s == 'APPROVED' ? 'Validée' : (s == 'REJECTED' ? 'Refusée' : 'En attente') %}
+                                                    {% set cls = s == 'APPROVED' ? 'ok' : (s == 'REJECTED' ? 'no' : 'warn') %}
+                                                    <p style="margin:6px 0 10px 0;font-size:14px;">
+                                                        Statut : <span class="badge {{ cls }}">{{ label }}</span>
+                                                        {% if currentIns.path %}
+                                                            — <a href="{{ asset(currentIns.path) }}" target="_blank" rel="noopener">Voir le fichier</a>
+                                                        {% endif %}
+                                                        {% if currentIns.adminComment %}
+                                                            <br><small class="muted">Commentaire admin : {{ currentIns.adminComment }}</small>
+                                                        {% endif %}
+                                                    </p>
+                                                {% else %}
+                                                    <p class="muted" style="margin:6px 0 10px 0;font-size:14px;">Aucun document déposé pour {{ current_school_year }}.</p>
+                                                {% endif %}
+
+                                                {# Formulaire d’upload unitaire (déjà préparé coté contrôleur) #}
+                                                {{ form_start(insurance_forms[child.id][t]) }}
+                                                {{ form_row(insurance_forms[child.id][t].file) }}
+                                                <button class="btn purple" type="submit">Déposer / Remplacer</button>
+                                                {{ form_end(insurance_forms[child.id][t]) }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+
+                    {% else %}
+
+                        {{ render(path('account_insurance_index')) }}
+
+                    {% endif %}
+                {% endif %}
+
             </div>
         </section>
     </main>
@@ -477,5 +589,100 @@
 
         // Messages : scroll en bas par défaut
         (function(){ var box=document.getElementById('msgList'); if(box) box.scrollTop=box.scrollHeight; })();
+
+
+        (function initDZ(){
+            const ACCEPT = ['application/pdf','image/jpeg','image/png'];
+
+            function fmtBytes(n){
+                if(n===0) return '0 o';
+                const u=['o','Ko','Mo','Go']; let i=0;
+                while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+                return (Math.round(n*10)/10)+' '+u[i];
+            }
+            function validType(file){
+                return ACCEPT.includes(file.type) || /\.(pdf|jpe?g|png)$/i.test(file.name);
+            }
+
+            function setupOne(dz){
+                const inputId = dz.getAttribute('data-for');
+                const input   = document.getElementById(inputId);
+                const area    = dz.querySelector('.dz-area'); // label cliquable
+                const meta    = dz.querySelector('.dz-meta');
+                const errBox  = dz.querySelector('.dz-error');
+                const clearBtn= dz.querySelector('.dz-clear');
+                const form    = dz.closest('form.dz-form');
+                const max     = parseInt(form?.dataset.max || (5*1024*1024), 10);
+
+                if(!input || !meta || !errBox) return;
+
+                function showErr(msg){
+                    errBox.textContent = msg;
+                    errBox.classList.add('show');
+                    setTimeout(()=>errBox.classList.remove('show'), 4000);
+                }
+                function setFile(file){
+                    if(!file) return;
+                    if(!validType(file)){ showErr('Format non supporté. PDF, JPG ou PNG uniquement.'); input.value=''; meta.classList.remove('show'); clearBtn.hidden=true; return; }
+                    if(file.size > max){ showErr('Le fichier dépasse 5 Mo.'); input.value=''; meta.classList.remove('show'); clearBtn.hidden=true; return; }
+                    meta.innerHTML = 'Fichier sélectionné : <b>'+ file.name + '</b> ('+ fmtBytes(file.size) +')';
+                    meta.classList.add('show');
+                    if(clearBtn) clearBtn.hidden = false;
+                }
+
+                // --- Drag & Drop sur le CONTAINER .dz (fiable)
+                ['dragenter','dragover'].forEach(evt=>{
+                    dz.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); area?.classList.add('is-dragover'); });
+                });
+                ['dragleave','dragend'].forEach(evt=>{
+                    dz.addEventListener(evt, ()=>{ area?.classList.remove('is-dragover'); });
+                });
+                dz.addEventListener('drop', (e)=>{
+                    e.preventDefault(); e.stopPropagation();
+                    area?.classList.remove('is-dragover');
+                    const file = e.dataTransfer?.files?.[0];
+                    if(!file) return;
+                    const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+                    setFile(file);
+                    // Pour auto-envoyer au drop: form?.submit();
+                });
+
+                // --- Sélection via dialogue
+                input.addEventListener('change', ()=>{
+                    const f = input.files?.[0];
+                    if(f) setFile(f);
+                });
+
+                // --- Bouton "Retirer"
+                clearBtn?.addEventListener('click', ()=>{
+                    input.value=''; meta.classList.remove('show'); clearBtn.hidden=true;
+                });
+
+                // --- Garde-fous au submit (le serveur revalide quoiqu’il arrive)
+                form?.addEventListener('submit', (e)=>{
+                    const f = input.files?.[0];
+                    if(!f){ showErr('Merci de sélectionner un fichier.'); e.preventDefault(); return; }
+                    if(!validType(f) || f.size>max){ showErr('Fichier invalide.'); e.preventDefault(); }
+                });
+            }
+
+            function boot(){
+                // Empêche le navigateur d’ouvrir le fichier si on drop en dehors
+                ['dragover','drop'].forEach(evt=>{
+                    window.addEventListener(evt, (e)=>{ e.preventDefault(); }, { passive:false });
+                    document.body.addEventListener(evt, (e)=>{ e.preventDefault(); }, { passive:false });
+                });
+                document.querySelectorAll('.dz').forEach(setupOne);
+            }
+
+            if (document.readyState === 'loading'){
+                document.addEventListener('DOMContentLoaded', boot, {once:true});
+            } else {
+                boot();
+            }
+            // Compatibilité Turbo (Hotwire / Symfony UX)
+            document.addEventListener('turbo:load', boot);
+        })();
+
     </script>
 {% endblock %}

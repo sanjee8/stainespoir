@@ -2,7 +2,6 @@
 namespace App\Controller\Admin;
 
 use App\Entity\OutingRegistration;
-use App\Repository\OutingRegistrationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
@@ -20,18 +19,25 @@ use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 
 final class OutingRegistrationCrudController extends AbstractCrudController
 {
-    public static function getEntityFqcn(): string { return OutingRegistration::class; }
+    public static function getEntityFqcn(): string
+    {
+        return OutingRegistration::class;
+    }
 
-    public function __construct(private EntityManagerInterface $em) {}
+    public function __construct(private EntityManagerInterface $em)
+    {
+    }
 
+    /**
+     * Par défaut, on redirige l’index vers la vue groupée “par sortie”.
+     */
     public function index(AdminContext $context): Response
     {
         $url = $this->container->get(AdminUrlGenerator::class)
@@ -47,10 +53,7 @@ final class OutingRegistrationCrudController extends AbstractCrudController
         return $crud
             ->setEntityLabelInSingular('Inscription')
             ->setEntityLabelInPlural('Inscriptions')
-            ->setSearchFields([
-                'child.firstName','child.lastName',
-                'outing.title','status','signatureName','signaturePhone'
-            ])
+            ->setSearchFields(['child.firstName','child.lastName','outing.title','status','signatureName','signaturePhone'])
             ->setDefaultSort(['outing.startsAt' => 'DESC', 'id' => 'DESC'])
             ->showEntityActionsInlined();
     }
@@ -67,26 +70,26 @@ final class OutingRegistrationCrudController extends AbstractCrudController
     public function configureActions(Actions $actions): Actions
     {
         $pdf = Action::new('pdf', 'Attestation', 'fa fa-file-pdf')
-            ->linkToRoute('admin_outing_pdf', fn(\App\Entity\OutingRegistration $r) => ['id' => $r->getId()])
-            ->displayIf(fn(\App\Entity\OutingRegistration $r) => null !== $r->getSignedAt());
+            ->linkToRoute('admin_outing_pdf', fn(OutingRegistration $r) => ['id' => $r->getId()])
+            ->displayIf(fn(OutingRegistration $r) => null !== $r->getSignedAt());
 
         $markAttended = Action::new('markAttended', 'Présent', 'fa fa-check')
             ->linkToCrudAction('markAttended')
-            ->displayIf(fn(\App\Entity\OutingRegistration $r) => $r->getStatus() !== 'attended');
+            ->displayIf(fn(OutingRegistration $r) => $r->getStatus() !== 'attended');
 
         $markAbsent = Action::new('markAbsent', 'Absent', 'fa fa-times')
             ->linkToCrudAction('markAbsent')
-            ->displayIf(fn(\App\Entity\OutingRegistration $r) => $r->getStatus() !== 'absent');
+            ->displayIf(fn(OutingRegistration $r) => $r->getStatus() !== 'absent');
 
         $markDeclined = Action::new('markDeclined', 'Refusée', 'fa fa-ban')
             ->linkToCrudAction('markDeclined')
-            ->displayIf(fn(\App\Entity\OutingRegistration $r) => $r->getStatus() !== 'declined');
+            ->displayIf(fn(OutingRegistration $r) => $r->getStatus() !== 'declined');
 
-        // 👉 nouvelle action "Vue par sortie" (page custom)
+        // Vue custom “par sortie”
         $grouped = Action::new('grouped', 'Vue par sortie', 'fa fa-layer-group')
             ->linkToCrudAction('groupedView');
 
-        // 👉 export CSV (des résultats filtrés sur la page groupée)
+        // Export CSV des résultats filtrés
         $export = Action::new('exportCsv', 'Exporter CSV', 'fa fa-file-csv')
             ->linkToCrudAction('groupedExportCsv');
 
@@ -100,24 +103,20 @@ final class OutingRegistrationCrudController extends AbstractCrudController
             ->add(Crud::PAGE_INDEX, $markDeclined);
     }
 
-
-
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->onlyOnIndex();
 
-        // Sortie: affiche le titre en liste, et propose le choix par titre dans les formulaires
         yield AssociationField::new('outing','Sortie')
             ->setFormTypeOption('choice_label', 'title')
-            ->formatValue(fn($v, \App\Entity\OutingRegistration $r)
+            ->formatValue(fn($v, OutingRegistration $r)
             => $r->getOuting()?->getTitle() ?? '—');
 
-        // Enfant: affiche prénom + nom
         yield AssociationField::new('child','Enfant')
             ->setFormTypeOption('choice_label', function($c) {
-                return method_exists($c,'getFirstName') ? ($c->getFirstName().' '.$c->getLastName()) : (string) $c;
+                return method_exists($c,'getFirstName') ? ($c->getFirstName().' '.$c->getLastName()) : (string)$c;
             })
-            ->formatValue(fn($v, \App\Entity\OutingRegistration $r)
+            ->formatValue(fn($v, OutingRegistration $r)
             => trim(($r->getChild()?->getFirstName() ?? '').' '.($r->getChild()?->getLastName() ?? '')) ?: '—');
 
         yield ChoiceField::new('status','Statut')
@@ -136,13 +135,13 @@ final class OutingRegistrationCrudController extends AbstractCrudController
         yield TextField::new('signaturePhone','Téléphone')->hideOnIndex();
         yield TextareaField::new('healthNotes','Infos santé')->hideOnIndex();
 
-        if (property_exists(\App\Entity\OutingRegistration::class, 'signatureIp')) {
+        if (property_exists(OutingRegistration::class, 'signatureIp')) {
             yield TextField::new('signatureIp','IP')->onlyOnDetail();
         }
-        if (property_exists(\App\Entity\OutingRegistration::class, 'signatureUserAgent')) {
+        if (property_exists(OutingRegistration::class, 'signatureUserAgent')) {
             yield TextareaField::new('signatureUserAgent','User-Agent')->onlyOnDetail();
         }
-        if (property_exists(\App\Entity\OutingRegistration::class, 'signatureImage')) {
+        if (property_exists(OutingRegistration::class, 'signatureImage')) {
             yield TextareaField::new('signatureImage','Signature (image)')
                 ->onlyOnDetail()
                 ->setTemplatePath('admin/fields/signature_image.html.twig');
@@ -192,19 +191,20 @@ final class OutingRegistrationCrudController extends AbstractCrudController
         return $this->redirect($ctx->getReferrer());
     }
 
+    // --- Vue “par sortie” ---
 
     public function groupedView(AdminContext $ctx, Request $req, \App\Repository\OutingRegistrationRepository $repo): Response
     {
         // Filtres GET
-        $q       = trim((string) $req->query->get('q',''));
-        $statuses= (array) $req->query->all('status'); // ['confirmed','attended',...]
-        $from    = $req->query->get('from'); // YYYY-MM-DD
-        $to      = $req->query->get('to');   // YYYY-MM-DD
-        $onlyFuture = $req->query->getBoolean('future', false);
-        $page    = max(1, (int) $req->query->get('page', 1));
-        $perOutings = min(20, max(1, (int) $req->query->get('per', 5)));   // sorties par page
-        $limitRegs  = min(200, max(5, (int) $req->query->get('limit', 20))); // inscriptions par sortie
-        $expandId = $req->query->getInt('expand', 0); // si défini, on ignore limit pour cette sortie
+        $q         = trim((string)$req->query->get('q',''));
+        $statuses  = (array)$req->query->all('status');
+        $from      = $req->query->get('from'); // YYYY-MM-DD
+        $to        = $req->query->get('to');   // YYYY-MM-DD
+        $onlyFuture= $req->query->getBoolean('future', false);
+        $page      = max(1, (int)$req->query->get('page', 1));
+        $perOutings= min(20, max(1, (int)$req->query->get('per', 5)));
+        $limitRegs = min(200, max(5,  (int)$req->query->get('limit', 20)));
+        $expandId  = $req->query->getInt('expand', 0);
 
         $qb = $repo->createQueryBuilder('r')
             ->join('r.outing','o')->addSelect('o')
@@ -230,7 +230,7 @@ final class OutingRegistrationCrudController extends AbstractCrudController
             $qb->andWhere('o.startsAt <= :to')->setParameter('to', new \DateTimeImmutable($to.' 23:59:59', new \DateTimeZone('Europe/Paris')));
         }
 
-        /** @var \App\Entity\OutingRegistration[] $rows */
+        /** @var OutingRegistration[] $rows */
         $rows = $qb->getQuery()->getResult();
 
         // Groupement par sortie
@@ -248,17 +248,19 @@ final class OutingRegistrationCrudController extends AbstractCrudController
             $allGroups[$oid]['regs'][] = $r;
             $allGroups[$oid]['total']++;
             $st = $r->getStatus();
-            if (isset($allGroups[$oid]['counts'][$st])) $allGroups[$oid]['counts'][$st]++;
+            if (isset($allGroups[$oid]['counts'][$st])) {
+                $allGroups[$oid]['counts'][$st]++;
+            }
         }
 
         // Pagination par sorties
-        $outingIds = array_keys($allGroups);
-        $totalOutings = count($outingIds);
-        $pages = (int) ceil(max(1, $totalOutings) / $perOutings);
-        $page = min($page, max(1, $pages));
-        $slice = array_slice($outingIds, ($page-1)*$perOutings, $perOutings);
+        $outingIds   = array_keys($allGroups);
+        $totalOutings= count($outingIds);
+        $pages       = (int)ceil(max(1, $totalOutings) / $perOutings);
+        $page        = min($page, max(1, $pages));
+        $slice       = array_slice($outingIds, ($page-1)*$perOutings, $perOutings);
 
-        // Applique le "limitRegs" par sortie (sauf si expand=ID)
+        // Applique la limite d’inscriptions par sortie (sauf expand)
         $groups = [];
         foreach ($slice as $oid) {
             $g = $allGroups[$oid];
@@ -267,7 +269,10 @@ final class OutingRegistrationCrudController extends AbstractCrudController
             if ($expandId && $expandId === $oid) {
                 // pas de limite pour la sortie développée
             } else {
-                if (count($regs) > $limitRegs) { $regs = array_slice($regs, 0, $limitRegs); $hasMore = true; }
+                if (count($regs) > $limitRegs) {
+                    $regs = array_slice($regs, 0, $limitRegs);
+                    $hasMore = true;
+                }
             }
             $g['regs'] = $regs;
             $g['has_more'] = $hasMore;
@@ -295,11 +300,11 @@ final class OutingRegistrationCrudController extends AbstractCrudController
 
     public function groupedExportCsv(Request $req, \App\Repository\OutingRegistrationRepository $repo): StreamedResponse
     {
-        $q       = trim((string) $req->query->get('q',''));
-        $statuses= (array) $req->query->all('status');
-        $from    = $req->query->get('from');
-        $to      = $req->query->get('to');
-        $onlyFuture = $req->query->getBoolean('future', false);
+        $q         = trim((string)$req->query->get('q',''));
+        $statuses  = (array)$req->query->all('status');
+        $from      = $req->query->get('from');
+        $to        = $req->query->get('to');
+        $onlyFuture= $req->query->getBoolean('future', false);
 
         $qb = $repo->createQueryBuilder('r')
             ->join('r.outing','o')->addSelect('o')
@@ -333,7 +338,7 @@ final class OutingRegistrationCrudController extends AbstractCrudController
             fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, ['Sortie','Date/heure','Lieu','Enfant','Statut','Signé le','Signataire','Téléphone']);
             foreach ($rows as $r) {
-                /** @var \App\Entity\OutingRegistration $r */
+                /** @var OutingRegistration $r */
                 $o = $r->getOuting(); $c = $r->getChild();
                 fputcsv($out, [
                     $o?->getTitle() ?? '',
@@ -353,6 +358,4 @@ final class OutingRegistrationCrudController extends AbstractCrudController
 
         return $resp;
     }
-
-
 }

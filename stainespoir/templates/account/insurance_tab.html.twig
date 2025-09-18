@@ -1,0 +1,98 @@
+{% block body %}
+<div class="section">
+
+    <h1>Assurances scolaires
+        <small style="color:#667085;font-weight:500;">({{ current_year }})</small>
+    </h1>
+    <p class="lead mb-3">
+        Déposez pour chaque enfant : <strong>Responsabilité civile</strong>.
+        Un administrateur validera ensuite.
+    </p>
+
+    {% if children is empty %}
+        <div class="card">Aucun enfant rattaché à votre compte.</div>
+    {% endif %}
+
+    <div class="vstack" style="display:grid; gap:24px; margin-top:15px">
+        {% for child in children %}
+        <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <div class="pill">{{ child.firstname }} {{ child.lastname }}</div>
+                    <div style="font-size:14px;color:#667085;margin-top:4px;">Année scolaire : {{ current_year }}</div>
+                </div>
+            </div>
+
+            <div style="display:grid;gap:16px;margin-top:16px;">
+                {% for t in ['RC'] %}
+                <div class="subcard">
+                    <h3 style="margin:0 0 8px 0;font-size:16px;">
+                        {% if t == 'RC' %}Responsabilité civile{% else %}Assurance maladie{% endif %}
+                    </h3>
+
+                    {# Statuts existants #}
+                    {% set items = (existingByChild[child.id] ?? [])|filter(i => i.type.value == t) %}
+                    {% set current = (items|filter(i => i.schoolYear == current_year)|first) %}
+                    {% if current %}
+                      {% set s = current.status.value %}
+                      <p style="margin:6px 0 10px 0;font-size:14px;">
+                        Statut :
+                        <span style="font-weight:700;{% if s=='APPROVED' %}color:#047857{% elseif s=='REJECTED' %}color:#B91C1C{% else %}color:#92400E{% endif %}">
+                          {{ current.status.label() }}
+                        </span>
+                        {% if current.path %}
+                          — <a href="{{ asset(current.path) }}" target="_blank" rel="noopener">Voir le fichier</a>
+                        {% endif %}
+                        {% if current.adminComment %}
+                          <br><small style="color:#6b7280">Commentaire admin : {{ current.adminComment }}</small>
+                        {% endif %}
+                      </p>
+                    {% else %}
+                      <p style="margin:6px 0 10px 0;font-size:14px;color:#6b7280;">
+                        Aucun document déposé pour {{ current_year }}.
+                      </p>
+                    {% endif %}
+
+
+                    {% set inputId = 'file_' ~ child.id ~ '_' ~ t %}
+                    {{ form_start(forms[child.id][t], {'attr': {'class':'dz-form', 'data-max':'5242880'}}) }}
+                    {{ form_widget(forms[child.id][t].file, {
+                    'id': inputId,
+                    'attr': {
+                    'class': 'dz-input',
+                    'accept': '.pdf,image/jpeg,image/png',
+                    'style': 'position:absolute;left:-9999px;'
+                    }
+                    }) }}
+
+                    <div class="dz" data-for="{{ inputId }}">
+                        <label class="dz-area" for="{{ inputId }}" aria-describedby="{{ inputId }}">
+                            <div class="dz-icon" aria-hidden="true">↥</div>
+                            <div>
+                                <p class="dz-title">Glissez-déposez votre fichier ici</p>
+                                <div class="dz-sub">
+                                    ou <span class="link" role="button">choisir un fichier</span> — formats acceptés : PDF/JPG/PNG, max 5 Mo
+                                </div>
+                            </div>
+                        </label>
+
+                    <div class="dz-meta" aria-live="polite"></div>
+                    <div class="dz-error" aria-live="assertive"></div>
+
+                    <div class="dz-actions">
+                      <button class="btn purple" type="submit">Déposer / Remplacer</button>
+                      <button class="btn ghost dz-clear" type="button" hidden>Retirer le fichier</button>
+                    </div>
+                  </div>
+                {{ form_end(forms[child.id][t]) }}
+
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  </div>
+{% endblock %}
+

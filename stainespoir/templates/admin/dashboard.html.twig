@@ -37,14 +37,7 @@
                                 </div>
                                 <div class="body">{{ m.body }}</div>
                                 <div class="actions" style="grid-column:1 / -1; text-align:right">
-                                    {# Liens utiles : détail de l'enfant et (si tu as) la vue des messages #}
-                                    <a class="btn btn-sm" href="{{ path('admin', {
-                                        crudAction: 'detail',
-                                        crudControllerFqcn: 'App\\\\Controller\\\\Admin\\\\ChildCrudController',
-                                        entityId: m.child.id
-                                    }) }}">Voir l’enfant</a>
-
-                                    {# Si tu ajoutes une page Admin “Messages” plus tard, on pourra lier ici #}
+                                    <a class="btn btn-sm" href="{{ parentUrls[m.child.id] ?? '#' }}">Voir le parent</a>
                                 </div>
                             </div>
                         {% endfor %}
