@@ -108,19 +108,22 @@
                 {% if upcomingOutings is defined and upcomingOutings|length > 0 %}
                     <div class="events">
                         {% for o in upcomingOutings %}
-                            <article class="ev card">
-                                <div class="date">
-                                    <span class="d">{{ o.startsAt|date('d', 'Europe/Paris') }}</span>
-                                    <span class="m">{{ attribute(MOIS, o.startsAt|date('n', 'Europe/Paris')) }}</span>
-                                </div>
-                                <div class="ev-body">
-                                    <h3>{{ o.title }}</h3>
-                                    {% if o.location %}
-                                        <p class="muted">{{ o.location }}</p>
-                                    {% endif %}
+                            <a href="{{ path('outing_show', { id: o.id, slug: o.slug ?? '' }) }}">
+                                <article class="ev card">
+                                    <div class="date">
+                                        <span class="d">{{ o.startsAt|date('d', 'Europe/Paris') }}</span>
+                                        <span class="m">{{ attribute(MOIS, o.startsAt|date('n', 'Europe/Paris')) }}</span>
+                                    </div>
+                                    <div class="ev-body">
+                                        <h3>{{ o.title }}</h3>
+                                        {% if o.location %}
+                                            <p class="muted">{{ o.location }}</p>
+                                        {% endif %}
 
-                                </div>
-                            </article>
+                                    </div>
+                                </article>
+                            </a>
+
                         {% endfor %}
                     </div>
                 {% else %}

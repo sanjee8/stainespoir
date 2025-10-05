@@ -1,0 +1,204 @@
+{# templates/outing/show.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ o.title ?? 'Sortie' }} — Stains Espoir{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .hero-outing {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(180deg,#f9fafc,#f3f7ff);
+            min-height: 260px;
+            display: grid;
+            align-items: end;
+            isolation: isolate;
+        }
+        .hero-outing img {
+            position: absolute; inset:0;
+            width:100%; height:100%; object-fit: cover;
+            transform: scale(1.02);
+            filter: saturate(1.02) contrast(1.02);
+        }
+        .hero-outing::after{
+            content:""; position:absolute; inset:0;
+            background: linear-gradient(180deg,rgba(0,0,0,0.0) 0%, rgba(0,0,0,.45) 100%);
+            z-index: 0;
+        }
+        .hero-inner{
+            position: relative; z-index:1;
+            padding: 22px;
+            color: #fff;
+            text-shadow: 0 1px 12px rgba(0,0,0,.35);
+        }
+        .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+        .chip{background: rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; padding:.35rem .6rem; border-radius:999px; font-weight:600; font-size:.9rem; backdrop-filter: blur(6px);}
+        .layout{display:grid;grid-template-columns: 1.6fr .9fr; gap: 24px; margin-top: 22px}
+        @media (max-width: 980px){ .layout{grid-template-columns:1fr}}
+        .card{background:#fff;border:1px solid #eceef3;border-radius:16px;box-shadow:0 10px 30px rgba(20,20,43,.06); padding:18px}
+        .prose{line-height:1.65; font-size:1.05rem}
+        .meta-list{display:grid;gap:.65rem}
+        .meta-row{display:flex;align-items:start;gap:.6rem}
+        .meta-ico{width:28px;height:28px;border-radius:8px;background:#f4f6ff;display:inline-grid;place-items:center;font-size:.95rem}
+        .aside{position: sticky; top: 84px; display:grid; gap: 12px}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem 1rem;border-radius:12px;border:1px solid #dfe3ea;font-weight:700}
+        .btn-primary{background:#5a67ff;border-color:#5a67ff;color:#fff}
+        .btn-ghost{background:#fff;color:#344054}
+        .back-link{display:inline-flex;align-items:center;gap:.4rem;color:#667085}
+        .gallery{display:grid;grid-template-columns:1fr 1fr; gap:10px}
+        .gallery-img{width:100%;object-fit:cover;border-radius:12px}
+        .divider{height:1px;background:linear-gradient(90deg,transparent,#eceef3,transparent);margin:.75rem 0}
+        .muted{color:#667085}
+        .badge-soft{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .5rem;border-radius:999px;background:#f6f8ff;color:#3b429f;border:1px solid #e7eafe;font-weight:600;font-size:.9rem}
+    </style>
+{% endblock %}
+
+{% block body %}
+    <section class="section">
+        <div class="container">
+
+            <a class="back-link" href="{{ app.request.headers.get('referer') ?? path('app_home') }}">← Retour</a>
+            {% set cover = o.imageUrl ?? null %}
+
+
+            {# --- HERO avec image --- #}
+            <div class="hero-outing" style="margin-top:12px; background:
+        radial-gradient(120% 140% at 70% 20%, #7356B5 0%, #5B3F91 42%, #402A72 100%),
+        linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,0));">
+
+                <div class="hero-inner">
+                    <div class="chips">
+                        {% if o.startsAt is defined and o.startsAt %}
+                            <span class="chip">🗓 {{ o.startsAt|date('d/m/Y H:i') }}{% if o.endsAt is defined and o.endsAt %} → {{ o.endsAt|date('d/m/Y H:i') }}{% endif %}</span>
+                        {% endif %}
+                        {% if o.location is defined and o.location %}
+                            <span class="chip">📍 {{ o.location }}</span>
+                        {% endif %}
+                        {% if o.capacity is defined and o.capacity is not null %}
+                            <span class="chip">👥 Capacité {{ o.capacity }}</span>
+                        {% endif %}
+                        {% if o.price is defined and o.price is not null %}
+                            <span class="chip">💶 {{ o.price }} €</span>
+                        {% endif %}
+                    </div>
+                    <h1 style="margin:.35rem 0 0; font-size: clamp(24px, 3.4vw, 40px);">{{ o.title ?? 'Sortie' }}</h1>
+                    {% if o.subtitle is defined and o.subtitle %}
+                        <p class="muted" style="color:rgba(255,255,255,.92)">{{ o.subtitle }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# --- CONTENU --- #}
+            <div class="layout">
+
+                {# Colonne principale #}
+                <article class="card">
+
+
+                    <div class="divider"></div>
+
+                    <div class="prose">
+                        {# Si tu as une version “sanitizedDescription”, préfère la :
+             {{ o.sanitizedDescription|raw }}
+             Sinon, on assume que la description stockée est safe #}
+                        {{ (o.description is defined and o.description) ? o.description|raw : '<p class="muted">Aucune description disponible pour cette sortie.</p>' }}
+                    </div>
+
+                    {% if o.notes is defined and o.notes %}
+                        <div class="divider"></div>
+                        <h3>Informations pratiques</h3>
+                        <div class="prose">{{ o.notes|raw }}</div>
+                    {% endif %}
+
+                    {% if o.rules is defined and o.rules %}
+                        <div class="divider"></div>
+                        <h3>Règles & autorisations</h3>
+                        <div class="prose">{{ o.rules|raw }}</div>
+                    {% endif %}
+                </article>
+
+                {# Colonne latérale (sticky) #}
+                <aside class="aside">
+                    <div class="card">
+                        {% if cover %}
+                            {# Mini galerie optionnelle (image principale + variantes si tu en as) #}
+                            <div style="margin-bottom:12px">
+                                <img src="{{ cover }}" class="gallery-img" alt="{{ o.title }}">
+                            </div>
+                        {% endif %}
+
+                        <div class="meta-list">
+                            {% if o.startsAt is defined and o.startsAt %}
+                                <div class="meta-row">
+                                    <div class="meta-ico">🗓</div>
+                                    <div>
+                                        <div><strong>Début</strong></div>
+                                        <div class="muted">{{ o.startsAt|date('d/m/Y H:i') }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if o.endsAt is defined and o.endsAt %}
+                                <div class="meta-row">
+                                    <div class="meta-ico">⏱</div>
+                                    <div>
+                                        <div><strong>Fin</strong></div>
+                                        <div class="muted">{{ o.endsAt|date('d/m/Y H:i') }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if o.location is defined and o.location %}
+                                <div class="meta-row">
+                                    <div class="meta-ico">📍</div>
+                                    <div>
+                                        <div><strong>Lieu</strong></div>
+                                        <div class="muted">{{ o.location }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if o.capacity is defined and o.capacity is not null %}
+                                <div class="meta-row">
+                                    <div class="meta-ico">👥</div>
+                                    <div>
+                                        <div><strong>Capacité</strong></div>
+                                        <div class="muted">{{ o.capacity }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if o.ageMin is defined or o.ageMax is defined %}
+                                <div class="meta-row">
+                                    <div class="meta-ico">🎒</div>
+                                    <div>
+                                        <div><strong>Âge</strong></div>
+                                        <div class="muted">
+                                            {% if o.ageMin is defined and o.ageMin %}{{ o.ageMin }}{% else %}—{% endif %} – {% if o.ageMax is defined and o.ageMax %}{{ o.ageMax }}{% else %}—{% endif %} ans
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if o.price is defined and o.price is not null %}
+                                <div class="meta-row">
+                                    <div class="meta-ico">💶</div>
+                                    <div>
+                                        <div><strong>Tarif</strong></div>
+                                        <div class="muted">{{ o.price }} €</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div style="display:grid;gap:.5rem">
+
+
+                            <a class="btn btn-ghost" href="mailto:?subject={{ ('Sortie : ' ~ (o.title ?? 'Stains Espoir'))|url_encode }}&body={{ app.request.uri|url_encode }}">✉️ Partager par mail</a>
+                        </div>
+                    </div>
+
+                </aside>
+            </div>
+        </div>
+    </section>
+{% endblock %}

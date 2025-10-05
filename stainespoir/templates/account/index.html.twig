@@ -322,10 +322,31 @@
                                     <div class="t-meta">{{ o.location }}</div>
                                 {% endif %}
 
+
                                 {% if o.description is defined and o.description %}
-                                    {% set plain = o.description|striptags %}
-                                    <p class="pc-desc">{{ plain|length > 220 ? plain|slice(0,220) ~ '…' : plain }}</p>
+                                    {# 1) On retire les balises et on nettoie un peu les espaces insécables #}
+                                    {% set plain = o.description|striptags|replace({'&nbsp;': ' '})|trim %}
+
+                                    {# 2) Troncature élégante (préserve les mots si tu as le filtre "u") #}
+                                    {% set excerpt = plain|length > 220
+                                        ? (plain|u.truncate(220, '…', true))
+                                        : plain
+                                        %}
+
+                                        <p class="pc-desc">
+                                            {{ excerpt }}
+                                            <a style="color: cornflowerblue"
+                                               href="{{ path('outing_show', { id: o.id, slug: o.slug ?? '' }) }}"
+                                               aria-label="Voir le détail de la sortie « {{ o.title }} »">
+                                                Voir plus
+                                            </a>
+                                        </p>
+
+
+
+
                                 {% endif %}
+
 
                                 <div class="out-actions">
                                     {% if reg %}

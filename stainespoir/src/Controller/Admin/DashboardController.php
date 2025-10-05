@@ -15,6 +15,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use Symfony\Component\Routing\Attribute\Route;
 
 class DashboardController extends AbstractDashboardController
@@ -269,4 +270,15 @@ class DashboardController extends AbstractDashboardController
         }
         yield $insItem;
     }
+
+
+
+    public function configureAssets(): Assets
+    {
+        $tinyKey = $_ENV['TINYMCE_API_KEY'] ?? '3krhhfydt90r0rw0atxo1ssdp9uem5nug5bdgnhrz0aysvnz';
+        return Assets::new()
+            ->addJsFile("https://cdn.tiny.cloud/1/{$tinyKey}/tinymce/6/tinymce.min.js")
+            ->addJsFile('assets/js/admin-editors.js');
+    }
+
 }
