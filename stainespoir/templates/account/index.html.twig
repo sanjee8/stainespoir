@@ -323,29 +323,19 @@
                                 {% endif %}
 
 
-                                {% if o.description is defined and o.description %}
-                                    {# 1) On retire les balises et on nettoie un peu les espaces insécables #}
-                                    {% set plain = o.description|striptags|replace({'&nbsp;': ' '})|trim %}
+                                {% set plain = o.descriptionPlain %}
+                                {% set excerpt = plain|length > 220
+                                    ? (plain|u.truncate(220, '…', true))
+                                    : plain
+                                %}
 
-                                    {# 2) Troncature élégante (préserve les mots si tu as le filtre "u") #}
-                                    {% set excerpt = plain|length > 220
-                                        ? (plain|u.truncate(220, '…', true))
-                                        : plain
-                                        %}
+                                <p class="pc-desc">
+                                    {{ excerpt }} {# pas de raw nécessaire #}
+                                    <a style="color: cornflowerblue"
+                                       href="{{ path('outing_show', { id: o.id, slug: o.slug ?? '' }) }}"
+                                       aria-label="Voir le détail de la sortie « {{ o.title }} »">Voir plus</a>
+                                </p>
 
-                                        <p class="pc-desc">
-                                            {{ excerpt }}
-                                            <a style="color: cornflowerblue"
-                                               href="{{ path('outing_show', { id: o.id, slug: o.slug ?? '' }) }}"
-                                               aria-label="Voir le détail de la sortie « {{ o.title }} »">
-                                                Voir plus
-                                            </a>
-                                        </p>
-
-
-
-
-                                {% endif %}
 
 
                                 <div class="out-actions">

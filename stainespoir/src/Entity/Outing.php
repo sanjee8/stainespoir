@@ -44,6 +44,16 @@ class Outing
     public function getLocation():?string {return $this->location;}
     public function setLocation(?string $l):self {$this->location=$l;return $this;}
     public function getDescription():?string {return $this->description;}
+    public function getDescriptionPlain(): string
+    {
+        $html = (string) ($this->description ?? '');
+        $plain = strip_tags($html);
+
+        $plain = str_replace("\xc2\xa0", ' ', $plain);
+        // décode les entités HTML vers Unicode
+        $plain = html_entity_decode($plain, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return trim($plain);
+    }
     public function setDescription(?string $d):self {$this->description=$d;return $this;}
     public function __toString(): string
     {

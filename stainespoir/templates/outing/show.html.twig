@@ -100,11 +100,10 @@
                     <div class="divider"></div>
 
                     <div class="prose">
-                        {# Si tu as une version “sanitizedDescription”, préfère la :
-             {{ o.sanitizedDescription|raw }}
-             Sinon, on assume que la description stockée est safe #}
-                        {{ (o.description is defined and o.description) ? o.description|raw : '<p class="muted">Aucune description disponible pour cette sortie.</p>' }}
+                        {{ o.description|default('<p class="muted">Aucune description disponible pour cette sortie.</p>') | raw }}
                     </div>
+
+
 
                     {% if o.notes is defined and o.notes %}
                         <div class="divider"></div>
