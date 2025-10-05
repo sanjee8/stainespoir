@@ -30,4 +30,27 @@ final class OutingRegistrationRepository extends ServiceEntityRepository
             ->orderBy('o.startsAt', 'DESC')
             ->setMaxResults($limit)->getQuery()->getResult();
     }
+
+    public function countSignedByOutingIds(array $outingIds): array
+    {
+        if (empty($outingIds)) {
+            return [];
+        }
+
+        $raw = $this->createQueryBuilder('r')
+            ->select('IDENTITY(r.outing) AS oid, COUNT(r.id) AS cnt')
+            ->andWhere('r.outing IN (:ids)')
+            ->andWhere('r.signedAt IS NOT NULL')
+            ->setParameter('ids', $outingIds)
+            ->groupBy('r.outing')
+            ->getQuery()
+            ->getScalarResult();
+
+        $map = [];
+        foreach ($raw as $row) {
+            $map[(int)$row['oid']] = (int)$row['cnt'];
+        }
+        return $map;
+    }
+
 }

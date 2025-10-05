@@ -8,6 +8,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
@@ -66,5 +67,10 @@ final class OutingCrudController extends AbstractCrudController
         yield TextField::new('location', 'Lieu')->hideOnIndex();
         yield UrlField::new('imageUrl', 'Image (URL)')->hideOnIndex();
         yield TextareaField::new('description', 'Description')->hideOnIndex();
+
+        // ✅ Limite d’enfants (par signatures)
+        yield IntegerField::new('capacity', 'Limite d’enfants (signatures)')
+            ->setHelp('Laisse vide pour illimité.')
+            ->setFormTypeOption('attr', ['min' => 0]);
     }
 }

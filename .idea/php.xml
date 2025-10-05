@@ -150,6 +150,10 @@
       <path value="$PROJECT_DIR$/stainespoir/vendor/doctrine/dbal" />
       <path value="$PROJECT_DIR$/stainespoir/vendor/doctrine/persistence" />
       <path value="$PROJECT_DIR$/stainespoir/vendor/egulias/email-validator" />
+      <path value="$PROJECT_DIR$/stainespoir/vendor/sabberworm/php-css-parser" />
+      <path value="$PROJECT_DIR$/stainespoir/vendor/dompdf/php-svg-lib" />
+      <path value="$PROJECT_DIR$/stainespoir/vendor/dompdf/php-font-lib" />
+      <path value="$PROJECT_DIR$/stainespoir/vendor/dompdf/dompdf" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2" />

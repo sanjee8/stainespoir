@@ -3,6 +3,7 @@ namespace App\Entity;
 
 use App\Repository\OutingRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: OutingRepository::class)]
 #[ORM\Table(name: 'outing')]
@@ -16,6 +17,13 @@ class Outing
 
     #[ORM\Column(length: 1024, nullable: true)]
     private ?string $imageUrl = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Assert\PositiveOrZero(message: 'La limite doit être >= 0.')]
+    private ?int $capacity = null; // null = illimité
+
+    public function getCapacity(): ?int { return $this->capacity; }
+    public function setCapacity(?int $capacity): self { $this->capacity = $capacity; return $this; }
 
     public function getImageUrl(): ?string
     {

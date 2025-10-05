@@ -177,10 +177,10 @@
                         <article class="card">
                             <div class="card-head"><b>Sorties à venir</b></div>
                             <ul class="clean">
-                                {% set up3 = data.upcoming|slice(0,3) %}
+                                {% set up3 = data.upcomings|slice(0,3) %}
                                 {% if up3 is not empty %}
                                     {% for r in up3 %}
-                                        <li>{{ r.outing.startsAt|date('d/m') }} — {{ r.outing.title }}</li>
+                                        <li>{{ r.startsAt|date('d/m') }} — {{ r.title }}</li>
                                     {% endfor %}
                                 {% else %}
                                     <li class="muted">Aucune sortie programmée.</li>
@@ -276,89 +276,84 @@
                 {% if tab == 'sorties' %}
                     <div class="panel-head">
                         <h2>Sorties</h2>
-                        <p class="muted">Autorisations parentales (lecture côté parent, envoi depuis le bouton).</p>
+                        <p class="muted">Toutes les sorties .</p>
                     </div>
 
                     <div class="out-grid">
-                        {% if data.upcoming is empty %}
-                            <p class="muted">Aucune sortie programmée.</p>
+                        {% if data.allOutings is empty %}
+                            <p class="muted">Aucune sortie pour le moment.</p>
                         {% endif %}
 
-                        {% for r in data.upcoming %}
-                            {% set signed = r.signedAt or r.status in ['confirmed','attended'] %}
+                        {% set now = date() %} {# now = DateTime du serveur (timezone Symfony) #}
+
+                        {% for o in data.allOutings %}
+                            {# Invitation de cet enfant ? #}
+                            {% set reg = data.invitedMap[o.id] ?? null %}
+                            {% set signed = reg and (reg.signedAt or reg.status in ['confirmed','attended']) %}
+
+                            {# Capacité et places restantes (globale, pas par enfant) #}
+                            {% set cap = o.capacity %}
+                            {% set signedCount = data.signedCounts[o.id] ?? 0 %}
+                            {% set remaining = cap is not null ? (cap - signedCount) : null %}
+
+                            {# Sortie passée ? #}
+                            {% set isPast = o.startsAt < now %}
+
                             <article class="out-ticket">
-                                {% if r.outing.imageUrl %}
-                                    <img src="{{ r.outing.imageUrl }}" alt="Image — {{ r.outing.title }}" class="ticket-cover">
+                                {% if o.imageUrl %}
+                                    <img src="{{ o.imageUrl }}" alt="Image — {{ o.title }}" class="ticket-cover">
                                 {% endif %}
-                                <div class="ribbon">Sortie</div>
+
+                                <div class="ribbon">{{ isPast ? 'Sortie passée' : 'Sortie' }}</div>
+
                                 <div class="t-head">
-                                    <h3>{{ r.outing.title }}</h3>
-                                    <div class="t-date">{{ r.outing.startsAt|date('d/m/Y') }}</div>
+                                    <h3>
+                                        {{ o.title }}
+                                        {% if cap is not null and not isPast %}
+                                            <small style="color: gray; font-weight: normal">
+                                                ({{ remaining > 0 ? remaining : 0 }} place(s) disponible{{ remaining > 1 ? 's' : '' }})
+                                            </small>
+                                        {% endif %}
+                                    </h3>
+                                    <div class="t-date">{{ o.startsAt|date('d/m/Y') }}</div>
                                 </div>
-                                <div class="t-meta">{{ r.outing.location }}</div>
+
+                                {% if o.location %}
+                                    <div class="t-meta">{{ o.location }}</div>
+                                {% endif %}
+
+                                {% if o.description is defined and o.description %}
+                                    {% set plain = o.description|striptags %}
+                                    <p class="pc-desc">{{ plain|length > 220 ? plain|slice(0,220) ~ '…' : plain }}</p>
+                                {% endif %}
+
                                 <div class="out-actions">
-                                    {% if signed %}
-                                        <span class="badge ok">Signée</span>
-                                        <a class="btn" href="{{ path('app_account_outing_pdf', { id: r.id }) }}">Télécharger l’attestation</a>
-                                    {% else %}
-                                        <a class="btn ghost" href="{{ path('app_account_outing_sign_form', { id: r.id }) }}">Autoriser la sortie</a>
+                                    {% if reg %}
+                                        {% if signed %}
+                                            <span class="badge ok">Signée</span>
+                                            <a class="btn" href="{{ path('app_account_outing_pdf', { id: reg.id }) }}">Télécharger l’attestation</a>
+                                        {% else %}
+                                            {% if isPast %}
+
+                                            {% elseif cap is not null and remaining <= 0 %}
+                                                <button class="btn" disabled>Sortie déjà complète</button>
+                                                <small class="text-muted d-block mt-1">(0 place(s) disponible)</small>
+                                            {% else %}
+                                                <a class="btn ghost" href="{{ path('app_account_outing_sign_form', { id: reg.id }) }}">Autoriser la sortie</a>
+                                                {% if cap is not null %}
+                                                    <small class="text-muted d-block mt-1">
+                                                        ({{ remaining }} place(s) disponible{{ remaining > 1 ? 's' : '' }})
+                                                    </small>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </article>
                         {% endfor %}
                     </div>
-
-                    {% if data.past is not empty %}
-                        <h3 style="margin-top:24px">Sorties passées</h3>
-                        <div class="past-grid">
-                            {% for r in data.past %}
-                                {% set o = r.outing %}
-                                {% set cover = null %}
-                                {% if o.imageUrl is defined and o.imageUrl %}
-                                    {% set isExternal = o.imageUrl starts with 'http://' or o.imageUrl starts with 'https://' or o.imageUrl starts with '//' %}
-                                    {% set cover = isExternal ? o.imageUrl : asset(o.imageUrl) %}
-                                {% endif %}
-
-                                {% set st = r.status|default('') %}
-                                {% set stLabel = {
-                                    'attended':'Présent',
-                                    'absent':'Absent',
-                                    'confirmed':'Signée',
-                                    'declined':'Refusée',
-                                    'cancelled':'Annulée'
-                                }[st]|default(st) %}
-                                {% set stClass = {
-                                    'attended':'ok',
-                                    'confirmed':'ok',
-                                    'absent':'no',
-                                    'declined':'no',
-                                    'cancelled':'warn'
-                                }[st]|default('ghost') %}
-
-                                <article class="card past-card {{ cover ? '' : 'noimg' }}">
-                                    {% if cover %}
-                                        <div class="pc-media"><img src="{{ cover }}" alt="Image — {{ o.title }}"></div>
-                                    {% endif %}
-                                    <div class="pc-body">
-                                        <div class="pc-head">
-                                            <div class="pc-date">{{ o.startsAt|date('d/m/Y') }}</div>
-                                            <span class="badge {{ stClass }}">{{ stLabel }}</span>
-                                        </div>
-                                        <h4 class="pc-title">{{ o.title }}</h4>
-                                        {% if o.location %}<div class="pc-loc muted">{{ o.location }}</div>{% endif %}
-                                        {% if o.description is defined and o.description %}
-                                            {% set plain = o.description|striptags %}
-                                            <p class="pc-desc">{{ plain|length > 220 ? plain|slice(0,220) ~ '…' : plain }}</p>
-                                        {% endif %}
-                                        {% if r.signedAt %}
-                                            <div class="pc-meta muted">Autorisation signée le {{ r.signedAt|date('d/m/Y') }}</div>
-                                        {% endif %}
-                                    </div>
-                                </article>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
                 {% endif %}
+
 
                 {# ===== MESSAGES ===== #}
                 {% if tab == 'messages' %}

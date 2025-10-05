@@ -8,6 +8,7 @@ use App\Repository\AttendanceRepository;
 use App\Repository\ChildRepository;
 use App\Repository\MessageRepository;
 use App\Repository\OutingRegistrationRepository;
+use App\Repository\OutingRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Service\PdfGenerator;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Doctrine\DBAL\LockMode;
 
 #[IsGranted('ROLE_PARENT')]
 final class AccountController extends AbstractController
@@ -31,7 +33,8 @@ final class AccountController extends AbstractController
         ChildRepository $children,
         AttendanceRepository $attendances,
         MessageRepository $messages,
-        OutingRegistrationRepository $regs
+        OutingRegistrationRepository $regs,
+        OutingRepository $outingRepo
     ) {
         /** @var \App\Entity\User $user */
         $user = $this->getUser();
@@ -70,8 +73,10 @@ final class AccountController extends AbstractController
             'messages'       => [],
             'messagesRecent' => [],
             'upcoming'       => [],
+            'upcomings'      => [],
             'past'           => [],
             'signedRate'     => 0,
+            'signedCounts'   => [],     // ← initialisation pour sécurité
         ];
 
         // KPI Présences (30 derniers jours)
@@ -92,10 +97,7 @@ final class AccountController extends AbstractController
 
         $totalPA = $pas['total'];
         $data['presencePct30'] = $totalPA ? (int) round($pas['present'] * 100 / $totalPA) : 0;
-
         $data['absencePct30']  = $totalPA ? (100 - $data['presencePct30']) : 0;
-
-
 
         // ----- Présences : calendrier serveur, samedis uniquement -----
         if ($tab === 'overview' || $tab === 'presences') {
@@ -152,31 +154,39 @@ final class AccountController extends AbstractController
             }
         }
 
-        // ----- Sorties (à venir + passées) + taux signé -----
+// ----- Sorties (toutes les sorties affichées) + KPI signé + invitations enfant -----
         if ($tab === 'overview' || $tab === 'sorties') {
             $now = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
 
-            $up = $regs->createQueryBuilder('r')
-                ->join('r.outing','o')
-                ->andWhere('r.child = :c')->setParameter('c',$cid)
-                ->andWhere('o.startsAt >= :now')->setParameter('now', $now, Types::DATETIME_IMMUTABLE)
-                ->orderBy('o.startsAt','ASC')
+            // 1) Inscriptions de CET enfant (servent aux KPI + savoir si "invité")
+            $childRegs = $regs->createQueryBuilder('r')
+                ->leftJoin('r.outing', 'o')->addSelect('o')
+                ->andWhere('r.child = :c')->setParameter('c', $cid)
+                ->orderBy('o.startsAt', 'ASC')
                 ->getQuery()->getResult();
+
+            // 2) Upcoming/past POUR L’ENFANT (garde ta logique existante pour l’overview)
+            $up = array_values(array_filter($childRegs, static function(OutingRegistration $r) use ($now) {
+                $o = $r->getOuting();
+                return $o && $o->getStartsAt() >= $now;
+            }));
 
             $past = [];
             if ($tab === 'sorties') {
-                $past = $regs->createQueryBuilder('r')
-                    ->join('r.outing','o')
-                    ->andWhere('r.child = :c')->setParameter('c',$cid)
-                    ->andWhere('o.startsAt < :now')->setParameter('now', $now, Types::DATETIME_IMMUTABLE)
-                    ->orderBy('o.startsAt','DESC')
-                    ->setMaxResults(20)
-                    ->getQuery()->getResult();
+                $past = array_values(array_filter($childRegs, static function(OutingRegistration $r) use ($now) {
+                    $o = $r->getOuting();
+                    return $o && $o->getStartsAt() < $now;
+                }));
+                // tri desc pour les passées (comme avant)
+                usort($past, static function(OutingRegistration $a, OutingRegistration $b) {
+                    return $b->getOuting()->getStartsAt() <=> $a->getOuting()->getStartsAt();
+                });
+                $past = array_slice($past, 0, 20);
             }
 
+            // 3) KPI signé (sur les "upcoming" de l’enfant)
             $signed = 0;
             $totalUpcoming = 0;
-            /** @var OutingRegistration $r */
             foreach ($up as $r) {
                 $totalUpcoming++;
                 if ($r->getSignedAt() || in_array($r->getStatus(), ['confirmed','attended'], true)) {
@@ -187,9 +197,37 @@ final class AccountController extends AbstractController
             $data['signedCount']   = $signed;
             $data['totalUpcoming'] = $totalUpcoming;
 
-            $data['upcoming'] = $up;
-            $data['past']     = $past;
+            // 4) Upcoming/past (compatibilité avec le reste du template)
+            $data['upcoming']  = $up;
+            $data['past']      = $past;
+
+            // Option que tu avais déjà
+            $data['upcomings'] = $outingRepo->findUpcoming(3);
+
+            // 5) TOUTES les sorties (pour l’affichage global dans l’onglet "sorties")
+            //    Tri décroissant par date (les plus récentes/à venir d’abord)
+            $allOutings = $outingRepo->createQueryBuilder('o')
+                ->orderBy('o.startsAt','DESC')
+                ->getQuery()->getResult();
+            $data['allOutings'] = $allOutings;
+
+            // 6) Map "invitation" pour CET enfant : outingId => OutingRegistration
+            $invitedMap = [];
+            foreach ($childRegs as $rr) {
+                $oid = $rr->getOuting()?->getId();
+                if ($oid) {
+                    $invitedMap[$oid] = $rr;
+                }
+            }
+            $data['invitedMap'] = $invitedMap;
+
+            // 7) Comptes de signatures par sortie (globaux) pour afficher "(n place(s) ...)"
+            $outingIds = array_map(static fn($o) => $o->getId(), $allOutings);
+            $data['signedCounts'] = !empty($outingIds)
+                ? $regs->countSignedByOutingIds($outingIds)   // ← méthode ajoutée dans OutingRegistrationRepository
+                : [];
         }
+
 
         return $this->render('account/index.html.twig', [
             'kids'    => $kids,
@@ -198,6 +236,7 @@ final class AccountController extends AbstractController
             'data'    => $data,
         ]);
     }
+
 
     #[Route('/mon-compte/messages/envoyer', name: 'app_account_message_send', methods: ['POST'])]
     public function messageSend(
@@ -281,56 +320,109 @@ final class AccountController extends AbstractController
             return $this->redirectToRoute('app_account', ['tab'=>'sorties'], 303);
         }
 
-        // ✅ Vérification du checkbox "consent" (name="consent" dans le formulaire)
+        // ✅ Consent obligatoire
         if (!$req->request->has('consent')) {
             $this->addFlash('error','Vous devez autoriser la participation et certifier être représentant légal.');
             return $this->redirectToRoute('app_account_outing_sign_form', ['id' => $id], 303);
         }
 
-        // Champs requis
-        $name  = trim((string) $req->request->get('name',''));
-        $phone = trim((string) $req->request->get('phone',''));
-        $health= trim((string) $req->request->get('health',''));
+        // Champs requis (on les lit AVANT la transaction pour pouvoir quitter proprement si manquants)
+        $name   = trim((string) $req->request->get('name',''));
+        $phone  = trim((string) $req->request->get('phone',''));
+        $health = trim((string) $req->request->get('health',''));
         if ($name === '' || $phone === '') {
             $this->addFlash('error','Nom et téléphone requis.');
             return $this->redirectToRoute('app_account_outing_sign_form', ['id'=>$id], 303);
         }
+        $signatureData = (string) $req->request->get('signature', '');
 
-        // Enregistrement
+        // ✅ Contrôle capacité avec verrou sous transaction (seulement si capacité définie)
+        $outing   = $reg->getOuting();
+        $capacity = method_exists($outing, 'getCapacity') ? $outing->getCapacity() : null;
+
+        if ($capacity !== null) {
+            $conn = $em->getConnection();
+            $conn->beginTransaction(); // ← ouvrir la transaction requise par le lock pessimiste
+
+            try {
+                // Verrouille l'Outing pour éviter les dépassements concurrents
+                $em->lock($outing, LockMode::PESSIMISTIC_WRITE);
+
+                // Compte uniquement les inscriptions SIGNÉES (signedAt non nul)
+                $signedCount = (int) $regs->createQueryBuilder('r')
+                    ->select('COUNT(r.id)')
+                    ->andWhere('r.outing = :o')
+                    ->andWhere('r.signedAt IS NOT NULL')
+                    ->setParameter('o', $outing)
+                    ->getQuery()
+                    ->getSingleScalarResult();
+
+                if ($signedCount >= $capacity) {
+                    $conn->rollBack();
+                    $this->addFlash('warning', 'Désolé, cette sortie est complète (limite d’enfants atteinte).');
+                    return $this->redirectToRoute('app_account', [
+                        'enfant' => $reg->getChild()->getId(),
+                        'tab'    => 'sorties'
+                    ], 303);
+                }
+
+                // ✅ On enregistre la signature SOUS VERROU puis on flush et commit
+                $reg->setSignatureName($name)
+                    ->setSignaturePhone($phone)
+                    ->setHealthNotes($health ?: null)
+                    ->setSignedAt(new \DateTimeImmutable())
+                    ->setStatus('confirmed');
+
+                if (method_exists($reg, 'setSignatureImage')) {
+                    if ($signatureData && str_starts_with($signatureData, 'data:image')) {
+                        $reg->setSignatureImage($signatureData);
+                    } else {
+                        $reg->setSignatureImage(null);
+                    }
+                }
+                if (method_exists($reg, 'setSignatureIp')) {
+                    $reg->setSignatureIp($req->getClientIp() ?: null);
+                }
+                if (method_exists($reg, 'setSignatureUserAgent')) {
+                    $reg->setSignatureUserAgent($req->headers->get('User-Agent') ?: null);
+                }
+
+                $em->flush();     // valide sous verrou
+                $conn->commit();  // libère le verrou
+
+                $this->addFlash('success','Autorisation enregistrée.');
+                return $this->redirectToRoute('app_account', [
+                    'enfant' => $reg->getChild()->getId(),
+                    'tab'    => 'sorties'
+                ], 303);
+
+            } catch (\Throwable $e) {
+                // Si quelque chose se passe mal, on annule la transaction et on relance l'erreur
+                $conn->rollBack();
+                throw $e;
+            }
+        }
+
+        // 👉 Capacité illimitée (pas de transaction/lock nécessaires)
         $reg->setSignatureName($name)
             ->setSignaturePhone($phone)
             ->setHealthNotes($health ?: null)
             ->setSignedAt(new \DateTimeImmutable())
             ->setStatus('confirmed');
 
-        // Si tu as un booléen en base, ex. setLegalConsent(true) :
-        // $reg->setLegalConsent(true);
-
-// Signature manuscrite (data URL)
-        $signatureData = (string) $req->request->get('signature', '');
-// (optionnel) la rendre obligatoire :
-// if ($signatureData === '') {
-//     $this->addFlash('error','Merci de signer dans la zone prévue.');
-//     return $this->redirectToRoute('app_account_outing_sign_form', ['id'=>$id], 303);
-// }
-
-// Enregistrer si la propriété existe (safe-guard)
         if (method_exists($reg, 'setSignatureImage')) {
-            // On ne garde que les data URL PNG valides
             if ($signatureData && str_starts_with($signatureData, 'data:image')) {
                 $reg->setSignatureImage($signatureData);
             } else {
                 $reg->setSignatureImage(null);
             }
         }
-// (optionnel) empreintes techniques si tu les ajoutes en base
         if (method_exists($reg, 'setSignatureIp')) {
             $reg->setSignatureIp($req->getClientIp() ?: null);
         }
         if (method_exists($reg, 'setSignatureUserAgent')) {
             $reg->setSignatureUserAgent($req->headers->get('User-Agent') ?: null);
         }
-
 
         $em->flush();
 
@@ -340,6 +432,7 @@ final class AccountController extends AbstractController
             'tab'    => 'sorties'
         ], 303);
     }
+
 
     // ========= Helpers calendrier / année scolaire =========
 
